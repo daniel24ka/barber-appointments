@@ -91,13 +91,14 @@ input, select, textarea { font-family: inherit; font-size: 0.95rem; }
   display: flex; flex-direction: column; position: fixed; right: 0; top: 0; bottom: 0;
   z-index: 1000; transition: var(--transition);
 }
-.sidebar-header { padding: 1.25rem; display: flex; align-items: center; gap: .75rem; border-bottom: 1px solid var(--border); }
+.sidebar-header { padding: 1.25rem; display: flex; align-items: center; gap: .75rem; border-bottom: 1px solid var(--border); position: relative; }
+.sidebar-close { display: none; position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.3rem; color: var(--text-secondary); padding: .5rem; }
 .shop-logo { width: 42px; height: 42px; background: var(--primary); color: white; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
 .sidebar-header h2 { font-size: 1.1rem; font-weight: 700; }
 .sidebar-nav { flex: 1; padding: .75rem .5rem; overflow-y: auto; }
 .nav-item {
   display: flex; align-items: center; gap: .75rem; padding: .7rem 1rem; border-radius: var(--radius-sm);
-  color: var(--text-secondary); font-weight: 500; margin-bottom: .2rem; transition: var(--transition);
+  color: var(--text-secondary); font-weight: 500; margin-bottom: .2rem; transition: background .2s ease, color .2s ease;
 }
 .nav-item:hover { background: var(--bg); color: var(--primary); }
 .nav-item.active { background: rgba(79,70,229,.08); color: var(--primary); font-weight: 600; }
@@ -299,11 +300,16 @@ tr:hover { background: rgba(79,70,229,.02); }
   .sidebar {
     transform: translateX(100%);
     box-shadow: -5px 0 25px rgba(0,0,0,.15);
-    width: 280px;
+    width: 85vw;
+    max-width: 320px;
   }
   .sidebar.open { transform: translateX(0); }
   .sidebar-toggle { display: block; }
+  .sidebar-close { display: flex; }
   .main-content { margin-right: 0; }
+  .nav-item { font-size: 1rem; padding: .85rem 1rem; color: var(--text); }
+  .nav-item i { font-size: 1.1rem; }
+  .sidebar-header h2 { font-size: 1.2rem; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: .75rem; }
   .stat-card { overflow: hidden; }
   .stat-info { min-width: 0; overflow: hidden; }

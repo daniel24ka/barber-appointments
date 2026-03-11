@@ -1132,6 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
   document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+  document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
 
   // Auto-login if token exists
   if (App.token && App.user) { showApp(); }
