@@ -65,9 +65,14 @@ async function showApp() {
   document.getElementById('loginPage').classList.add('hidden');
   document.getElementById('appContainer').classList.remove('hidden');
   document.getElementById('currentUserName').textContent = App.user.display_name;
+  document.getElementById('moreMenuUser').textContent = App.user.display_name;
   document.getElementById('todayDate').textContent = formatDate(new Date());
 
-  if (App.user.role !== 'admin') document.getElementById('settingsNav').classList.add('hidden');
+  if (App.user.role !== 'admin') {
+    document.getElementById('settingsNav').classList.add('hidden');
+    const settingsMore = document.getElementById('settingsMoreNav');
+    if (settingsMore) settingsMore.style.display = 'none';
+  }
 
   try {
     const [barbers, services, settings] = await Promise.all([
@@ -84,7 +89,12 @@ async function showApp() {
 // === Navigation ===
 function navigate(page) {
   App.currentPage = page;
+  // Update desktop sidebar nav
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  // Update mobile bottom nav
+  document.querySelectorAll('.bottom-nav-item').forEach(n => {
+    if (n.dataset.page !== 'more') n.classList.toggle('active', n.dataset.page === page);
+  });
 
   const titles = {
     dashboard: 'לוח בקרה', calendar: 'יומן תורים', appointments: 'רשימת תורים',
@@ -100,12 +110,10 @@ function navigate(page) {
   };
   if (renderers[page]) renderers[page]();
 
-  // Close sidebar on mobile only
-  if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebarOverlay').classList.add('hidden');
-    document.body.style.overflow = '';
-  }
+  // Close more menu if open
+  const moreMenu = document.getElementById('moreMenu');
+  if (moreMenu) moreMenu.classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
 // === Dashboard ===
@@ -1114,25 +1122,45 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
 
-  // Sidebar toggle - mobile only
-  function isMobile() { return window.innerWidth <= 768; }
-  function openSidebar() {
-    if (!isMobile()) return;
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('sidebarOverlay').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebarOverlay').classList.add('hidden');
+  // Bottom nav (mobile)
+  document.querySelectorAll('.bottom-nav-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const page = this.dataset.page;
+      if (page === 'more') {
+        document.getElementById('moreMenu').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      } else {
+        navigate(page);
+      }
+    });
+  });
+
+  // More menu items
+  document.querySelectorAll('.more-menu-item[data-page]').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      navigate(this.dataset.page);
+    });
+  });
+
+  // More menu close
+  function closeMoreMenu() {
+    document.getElementById('moreMenu').classList.add('hidden');
     document.body.style.overflow = '';
   }
-  document.getElementById('sidebarToggle').addEventListener('click', function() {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar.classList.contains('open')) closeSidebar();
-    else openSidebar();
+  document.getElementById('moreMenuClose').addEventListener('click', closeMoreMenu);
+  document.getElementById('moreMenuOverlay').addEventListener('click', closeMoreMenu);
+
+  // More menu logout
+  document.getElementById('moreLogoutBtn').addEventListener('click', function() {
+    closeMoreMenu();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    App.token = null;
+    App.user = null;
+    showLogin();
   });
-  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
   // Auto-login if token exists
   if (App.token && App.user) { showApp(); }

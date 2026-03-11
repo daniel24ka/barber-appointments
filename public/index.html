@@ -92,9 +92,6 @@
     <!-- Main Content -->
     <main class="main-content">
       <header class="top-bar">
-        <button class="sidebar-toggle" id="sidebarToggle">
-          <i class="fas fa-bars"></i>
-        </button>
         <h1 id="pageTitle">לוח בקרה</h1>
         <div class="top-bar-actions">
           <span class="today-date" id="todayDate"></span>
@@ -105,6 +102,41 @@
         <!-- Dynamic content loaded here -->
       </div>
     </main>
+
+    <!-- Bottom Nav (mobile only) -->
+    <nav class="bottom-nav" id="bottomNav">
+      <a href="#" class="bottom-nav-item active" data-page="dashboard">
+        <i class="fas fa-home"></i><span>ראשי</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-page="calendar">
+        <i class="fas fa-calendar-alt"></i><span>יומן</span>
+      </a>
+      <a href="#" class="bottom-nav-item add-btn" data-page="newAppointment">
+        <i class="fas fa-plus"></i><span>תור חדש</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-page="appointments">
+        <i class="fas fa-clock"></i><span>תורים</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-page="more" id="moreBtn">
+        <i class="fas fa-bars"></i><span>עוד</span>
+      </a>
+    </nav>
+
+    <!-- More Menu (mobile bottom sheet) -->
+    <div class="more-menu hidden" id="moreMenu">
+      <div class="more-menu-overlay" id="moreMenuOverlay"></div>
+      <div class="more-menu-sheet">
+        <div class="more-menu-header">
+          <span id="moreMenuUser">מנהל</span>
+          <button class="more-menu-close" id="moreMenuClose"><i class="fas fa-times"></i></button>
+        </div>
+        <a href="#" class="more-menu-item" data-page="clients"><i class="fas fa-users"></i> לקוחות</a>
+        <a href="#" class="more-menu-item" data-page="barbers"><i class="fas fa-user-tie"></i> ספרים</a>
+        <a href="#" class="more-menu-item" data-page="services"><i class="fas fa-list"></i> שירותים</a>
+        <a href="#" class="more-menu-item" data-page="settings" id="settingsMoreNav"><i class="fas fa-cog"></i> הגדרות</a>
+        <button class="more-menu-item more-menu-logout" id="moreLogoutBtn"><i class="fas fa-sign-out-alt"></i> יציאה</button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal -->
