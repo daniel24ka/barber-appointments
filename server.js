@@ -23,6 +23,9 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Public booking routes (no auth required)
+app.use('/api/booking', require('./routes/v1/booking'));
+
 // Routes
 app.use('/api/auth', require('./routes/v1/auth'));
 app.use('/api/appointments', require('./routes/v1/appointments'));
