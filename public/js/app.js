@@ -1117,12 +1117,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const isOpen = sidebar.classList.toggle('open');
-    if (isOpen) overlay.classList.remove('hidden');
-    else overlay.classList.add('hidden');
+    if (isOpen) {
+      overlay.classList.remove('hidden');
+      document.body.classList.add('sidebar-open');
+    } else {
+      overlay.classList.add('hidden');
+      document.body.classList.remove('sidebar-open');
+    }
   }
   function closeSidebar() {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebarOverlay').classList.add('hidden');
+    document.body.classList.remove('sidebar-open');
   }
   document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
   document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
