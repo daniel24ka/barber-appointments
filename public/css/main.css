@@ -295,11 +295,10 @@ tr:hover { background: rgba(79,70,229,.02); }
 }
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(100%);
-    box-shadow: -5px 0 25px rgba(0,0,0,.15);
+    transform: translateX(calc(100% + 10px));
     width: 280px;
   }
-  .sidebar.open { transform: translateX(0); }
+  .sidebar.open { transform: translateX(0); box-shadow: -5px 0 25px rgba(0,0,0,.15); }
   .sidebar-toggle { display: block; }
   .main-content { margin-right: 0; }
   .dashboard-grid { grid-template-columns: 1fr; }
