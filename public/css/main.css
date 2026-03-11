@@ -87,7 +87,7 @@ input, select, textarea { font-family: inherit; font-size: 0.95rem; }
 .sidebar {
   width: var(--sidebar-w); background: white; border-left: 1px solid var(--border);
   display: flex; flex-direction: column; position: fixed; right: 0; top: 0; bottom: 0;
-  z-index: 100; transition: var(--transition);
+  z-index: 100; transition: transform .3s ease, box-shadow .3s ease;
 }
 .sidebar-header { padding: 1.25rem; display: flex; align-items: center; gap: .75rem; border-bottom: 1px solid var(--border); }
 .shop-logo { width: 42px; height: 42px; background: var(--primary); color: white; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
@@ -132,9 +132,9 @@ input, select, textarea { font-family: inherit; font-size: 0.95rem; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .stat-card {
   background: white; border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow);
-  display: flex; align-items: center; gap: 1rem; transition: var(--transition);
+  display: flex; align-items: center; gap: 1rem; transition: box-shadow .2s ease;
 }
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.stat-card:hover { box-shadow: var(--shadow-lg); }
 .stat-icon { width: 52px; height: 52px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
 .stat-icon.blue { background: rgba(79,70,229,.1); color: var(--primary); }
 .stat-icon.green { background: rgba(16,185,129,.1); color: var(--success); }
@@ -304,7 +304,6 @@ tr:hover { background: rgba(79,70,229,.02); }
   .main-content { margin-right: 0; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .stat-card:hover { transform: none; }
   .form-row { grid-template-columns: 1fr; }
   .calendar-grid.weekly { grid-template-columns: 50px repeat(7, 1fr); }
   .calendar-appt { font-size: .65rem; }
