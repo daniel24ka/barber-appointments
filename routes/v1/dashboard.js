@@ -9,7 +9,8 @@ router.use(authenticateToken);
 router.get('/stats', (req, res) => {
   try {
     const db = getDb();
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
     const todayAppts = db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(today).c;
     const pendingAppts = db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status = 'pending'").get(today).c;
@@ -51,7 +52,7 @@ router.get('/stats', (req, res) => {
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setDate(d.getDate() - d.getDay() + i);
-      const ds = d.toISOString().split('T')[0];
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const count = db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(ds).c;
       weekDays.push({ date: ds, day: d.getDay(), count });
     }

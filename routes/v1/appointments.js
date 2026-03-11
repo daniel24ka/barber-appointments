@@ -23,7 +23,7 @@ router.get('/check/availability', (req, res) => {
     const barber = db.prepare('SELECT work_days, work_start_time, work_end_time FROM barbers WHERE id = ?').get(barber_id);
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
-    const dayOfWeek = new Date(date).getDay();
+    const dayOfWeek = new Date(date + 'T00:00:00').getDay();
     const workDays = barber.work_days.split(',').map(Number);
     if (!workDays.includes(dayOfWeek)) {
       return res.json({ available: false, reason: 'הספר לא עובד ביום זה' });
@@ -70,7 +70,7 @@ router.get('/slots/:barber_id/:date', (req, res) => {
     const dayOff = db.prepare('SELECT id FROM days_off WHERE barber_id = ? AND date = ?').get(barber_id, date);
     if (dayOff) return res.json({ slots: [], reason: 'יום חופש' });
 
-    const dayOfWeek = new Date(date).getDay();
+    const dayOfWeek = new Date(date + 'T00:00:00').getDay();
     const workDays = barber.work_days.split(',').map(Number);
     if (!workDays.includes(dayOfWeek)) return res.json({ slots: [], reason: 'לא עובד ביום זה' });
 

@@ -44,8 +44,10 @@ const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','�
 const STATUS_HE = { pending: 'ממתין', confirmed: 'מאושר', completed: 'הושלם', cancelled: 'בוטל', no_show: 'לא הגיע' };
 
 function formatDate(d) { const dt = new Date(d); return `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`; }
-function dateStr(d) { return d.toISOString().split('T')[0]; }
+function dateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function getInitials(name) { return name.split(' ').map(w => w[0]).join('').substring(0, 2); }
+function escHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+function escAttr(str) { return String(str).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // === Auth ===
 function login(token, user) {
@@ -550,11 +552,11 @@ async function searchClientsForBooking(term) {
   try {
     const clients = await api(`/clients?search=${encodeURIComponent(term)}`);
     container.innerHTML = clients.slice(0, 8).map(c => `
-      <div class="client-card" onclick="selectClientForBooking(${c.id}, '${c.name}', '${c.phone}')">
-        <div class="client-avatar">${getInitials(c.name)}</div>
+      <div class="client-card" onclick="selectClientForBooking(${c.id}, '${escAttr(c.name)}', '${escAttr(c.phone)}')">
+        <div class="client-avatar">${escHtml(getInitials(c.name))}</div>
         <div class="client-details">
-          <h4>${c.name} ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''}</h4>
-          <p>${c.phone}</p>
+          <h4>${escHtml(c.name)} ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''}</h4>
+          <p>${escHtml(c.phone)}</p>
         </div>
       </div>
     `).join('');
@@ -567,7 +569,7 @@ function selectClientForBooking(id, name, phone) {
   document.getElementById('clientResults').innerHTML = '';
   const sel = document.getElementById('selectedClient');
   sel.classList.remove('hidden');
-  sel.innerHTML = `<div class="client-card"><div class="client-avatar">${getInitials(name)}</div><div class="client-details"><h4>${name}</h4><p>${phone}</p></div><button class="btn btn-sm btn-outline" onclick="clearSelectedClient()"><i class="fas fa-times"></i></button></div>`;
+  sel.innerHTML = `<div class="client-card"><div class="client-avatar">${escHtml(getInitials(name))}</div><div class="client-details"><h4>${escHtml(name)}</h4><p>${escHtml(phone)}</p></div><button class="btn btn-sm btn-outline" onclick="clearSelectedClient()"><i class="fas fa-times"></i></button></div>`;
 }
 
 function clearSelectedClient() {
@@ -731,12 +733,12 @@ async function editClient(id) {
   try {
     const c = await api(`/clients/${id}`);
     openModal('עריכת לקוח', `
-      <div class="form-group"><label>שם</label><input type="text" id="ecName" value="${c.name}"></div>
+      <div class="form-group"><label>שם</label><input type="text" id="ecName" value="${escAttr(c.name)}"></div>
       <div class="form-row">
-        <div class="form-group"><label>טלפון</label><input type="text" id="ecPhone" value="${c.phone || ''}"></div>
-        <div class="form-group"><label>אימייל</label><input type="email" id="ecEmail" value="${c.email || ''}"></div>
+        <div class="form-group"><label>טלפון</label><input type="text" id="ecPhone" value="${escAttr(c.phone || '')}"></div>
+        <div class="form-group"><label>אימייל</label><input type="email" id="ecEmail" value="${escAttr(c.email || '')}"></div>
       </div>
-      <div class="form-group"><label>הערות</label><textarea id="ecNotes">${c.notes || ''}</textarea></div>
+      <div class="form-group"><label>הערות</label><textarea id="ecNotes">${escHtml(c.notes || '')}</textarea></div>
       <div class="form-group"><label><input type="checkbox" id="ecVip" ${c.vip?'checked':''}> לקוח VIP</label></div>
       <div class="modal-actions">
         <button class="btn btn-primary" onclick="saveEditClient(${id})"><i class="fas fa-save"></i> שמור</button>
@@ -790,7 +792,7 @@ async function renderBarbers() {
           <td>
             <div class="btn-group">
               <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i></button>
-              <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${b.name}')"><i class="fas fa-calendar-minus"></i></button>
+              <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i></button>
             </div>
           </td>
         </tr>
@@ -847,19 +849,19 @@ async function editBarber(id) {
   try {
     const b = await api(`/barbers/${id}`);
     openModal('עריכת ספר', `
-      <div class="form-group"><label>שם</label><input type="text" id="ebName" value="${b.name}"></div>
+      <div class="form-group"><label>שם</label><input type="text" id="ebName" value="${escAttr(b.name)}"></div>
       <div class="form-row">
-        <div class="form-group"><label>טלפון</label><input type="text" id="ebPhone" value="${b.phone || ''}"></div>
-        <div class="form-group"><label>אימייל</label><input type="email" id="ebEmail" value="${b.email || ''}"></div>
+        <div class="form-group"><label>טלפון</label><input type="text" id="ebPhone" value="${escAttr(b.phone || '')}"></div>
+        <div class="form-group"><label>אימייל</label><input type="email" id="ebEmail" value="${escAttr(b.email || '')}"></div>
       </div>
-      <div class="form-group"><label>התמחות</label><input type="text" id="ebSpecialty" value="${b.specialty || ''}"></div>
+      <div class="form-group"><label>התמחות</label><input type="text" id="ebSpecialty" value="${escAttr(b.specialty || '')}"></div>
       <div class="form-row">
         <div class="form-group"><label>שעת התחלה</label><input type="time" id="ebStartTime" value="${b.work_start_time}"></div>
         <div class="form-group"><label>שעת סיום</label><input type="time" id="ebEndTime" value="${b.work_end_time}"></div>
       </div>
       <div class="form-group"><label>ימי עבודה (מספרים מופרדים בפסיקים: 0=ראשון...6=שבת)</label><input type="text" id="ebWorkDays" value="${b.work_days}"></div>
       <div class="form-group"><label>צבע</label><input type="color" id="ebColor" value="${b.color}"></div>
-      <div class="form-group"><label>הערות</label><textarea id="ebNotes">${b.notes || ''}</textarea></div>
+      <div class="form-group"><label>הערות</label><textarea id="ebNotes">${escHtml(b.notes || '')}</textarea></div>
       <div class="modal-actions">
         <button class="btn btn-primary" onclick="saveEditBarber(${id})"><i class="fas fa-save"></i> שמור</button>
         <button class="btn btn-outline" onclick="closeModal()">ביטול</button>
@@ -896,11 +898,11 @@ async function manageDaysOff(barberId, barberName) {
         <div class="form-group"><label>תאריך</label><input type="date" id="newDayOffDate"></div>
         <div class="form-group"><label>סיבה</label><input type="text" id="newDayOffReason" placeholder="חופשה, חג..."></div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="addDayOff(${barberId},'${barberName}')"><i class="fas fa-plus"></i> הוסף יום חופש</button>
+      <button class="btn btn-primary btn-sm" onclick="addDayOff(${barberId},'${escAttr(barberName)}')"><i class="fas fa-plus"></i> הוסף יום חופש</button>
       <div id="daysOffList" style="margin-top:1rem">
         ${daysOff.length ? `<table><thead><tr><th>תאריך</th><th>סיבה</th><th>פעולה</th></tr></thead><tbody>
-          ${daysOff.map(d => `<tr><td>${formatDate(d.date)}</td><td>${d.reason || '-'}</td>
-            <td><button class="btn btn-sm btn-danger" onclick="removeDayOff(${barberId},${d.id},'${barberName}')"><i class="fas fa-trash"></i></button></td></tr>`).join('')}
+          ${daysOff.map(d => `<tr><td>${formatDate(d.date)}</td><td>${escHtml(d.reason || '-')}</td>
+            <td><button class="btn btn-sm btn-danger" onclick="removeDayOff(${barberId},${d.id},'${escAttr(barberName)}')"><i class="fas fa-trash"></i></button></td></tr>`).join('')}
         </tbody></table>` : '<p style="color:var(--text-light)">אין ימי חופש מתוכננים</p>'}
       </div>
     `);
@@ -1001,8 +1003,8 @@ async function editService(id) {
   if (!s) return;
 
   openModal('עריכת שירות', `
-    <div class="form-group"><label>שם</label><input type="text" id="esName" value="${s.name}"></div>
-    <div class="form-group"><label>תיאור</label><input type="text" id="esDesc" value="${s.description || ''}"></div>
+    <div class="form-group"><label>שם</label><input type="text" id="esName" value="${escAttr(s.name)}"></div>
+    <div class="form-group"><label>תיאור</label><input type="text" id="esDesc" value="${escAttr(s.description || '')}"></div>
     <div class="form-row">
       <div class="form-group"><label>משך (דקות)</label><input type="number" id="esDuration" value="${s.duration}"></div>
       <div class="form-group"><label>מחיר (₪)</label><input type="number" id="esPrice" value="${s.price}"></div>
@@ -1155,11 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // More menu logout
   document.getElementById('moreLogoutBtn').addEventListener('click', function() {
     closeMoreMenu();
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    App.token = null;
-    App.user = null;
-    showLogin();
+    logout();
   });
 
   // Auto-login if token exists

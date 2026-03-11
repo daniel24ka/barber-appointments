@@ -273,34 +273,6 @@ function seedData(db) {
     db.prepare('INSERT INTO services (name, description, duration, price, color, sort_order) VALUES (?,?,?,?,?,?)').run(...s);
   }
 
-  // Clients
-  const clients = [
-    ['אבי כהן', '052-1111111', 'avi@email.com', 'לקוח קבוע, מעדיף יום שלישי', 1],
-    ['משה לוי', '052-2222222', 'moshe@email.com', '', 0],
-    ['יעקב ישראלי', '052-3333333', 'yakov@email.com', 'אלרגיה לחומרי צביעה', 0],
-    ['דני אברהם', '052-4444444', 'dani@email.com', 'VIP - לקוח מהתחלה', 1],
-    ['רון גולן', '052-5555555', 'ron@email.com', '', 0],
-  ];
-  for (const c of clients) {
-    db.prepare('INSERT INTO clients (name, phone, email, notes, vip) VALUES (?,?,?,?,?)').run(...c);
-  }
-
-  // Sample appointments
-  const today = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  const ds = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-
-  const appts = [
-    [1, 1, 1, ds, '09:00', '09:30', 30, 'confirmed', 60],
-    [2, 1, 2, ds, '10:00', '10:45', 45, 'confirmed', 90],
-    [3, 2, 3, ds, '11:00', '11:20', 20, 'pending', 40],
-    [4, 2, 1, ds, '14:00', '14:30', 30, 'pending', 60],
-    [5, 3, 5, ds, '09:30', '09:50', 20, 'confirmed', 45],
-  ];
-  for (const a of appts) {
-    db.prepare('INSERT INTO appointments (client_id, barber_id, service_id, date, start_time, end_time, duration, status, price) VALUES (?,?,?,?,?,?,?,?,?)').run(...a);
-  }
-
   // Settings
   const settings = [
     ['shop_name', 'הספרייה של יוסי'],
@@ -315,5 +287,9 @@ function seedData(db) {
     db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?,?)').run(...s);
   }
 }
+
+// Graceful shutdown - save DB before exit
+process.on('SIGTERM', () => { saveDbSync(); process.exit(0); });
+process.on('SIGINT', () => { saveDbSync(); process.exit(0); });
 
 module.exports = { getDb, initDatabase };

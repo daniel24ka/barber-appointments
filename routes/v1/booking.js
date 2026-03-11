@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../../db/schema');
 
-const SLOT_DURATION = 30; // minutes
-
 // Get active barbers (public)
 router.get('/barbers', (req, res) => {
   try {
@@ -40,6 +38,10 @@ router.get('/slots/:barber_id/:date', (req, res) => {
     const workDays = barber.work_days.split(',').map(Number);
     if (!workDays.includes(dayOfWeek)) return res.json({ slots: [], reason: 'הספר לא עובד ביום זה' });
 
+    // Get first active service to determine slot duration
+    const service = db.prepare("SELECT * FROM services WHERE active = 1 ORDER BY sort_order ASC LIMIT 1").get();
+    const slotDuration = service ? service.duration : 30;
+
     // Get existing appointments
     const existing = db.prepare(`
       SELECT start_time, end_time FROM appointments
@@ -47,27 +49,28 @@ router.get('/slots/:barber_id/:date', (req, res) => {
       ORDER BY start_time
     `).all(barber_id, date);
 
-    // Generate 30-min slots
+    // Generate slots based on service duration
     const [startH, startM] = barber.work_start_time.split(':').map(Number);
     const [endH, endM] = barber.work_end_time.split(':').map(Number);
     let currentMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
+    const interval = parseInt(db.prepare("SELECT value FROM settings WHERE key = 'slot_interval'").get()?.value || '15');
 
     // If today, skip past slots
     const now = new Date();
     const isToday = requestedDate.toDateString() === now.toDateString();
 
     const slots = [];
-    while (currentMinutes + SLOT_DURATION <= endMinutes) {
+    while (currentMinutes + slotDuration <= endMinutes) {
       const slotStart = `${String(Math.floor(currentMinutes / 60)).padStart(2, '0')}:${String(currentMinutes % 60).padStart(2, '0')}`;
-      const slotEndMin = currentMinutes + SLOT_DURATION;
+      const slotEndMin = currentMinutes + slotDuration;
       const slotEnd = `${String(Math.floor(slotEndMin / 60)).padStart(2, '0')}:${String(slotEndMin % 60).padStart(2, '0')}`;
 
       // Skip past times if today
       if (isToday) {
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         if (currentMinutes <= nowMinutes) {
-          currentMinutes += SLOT_DURATION;
+          currentMinutes += interval;
           continue;
         }
       }
@@ -78,7 +81,7 @@ router.get('/slots/:barber_id/:date', (req, res) => {
         slots.push({ start: slotStart, end: slotEnd });
       }
 
-      currentMinutes += SLOT_DURATION;
+      currentMinutes += interval;
     }
 
     res.json({ slots });
@@ -119,9 +122,9 @@ router.post('/book', (req, res) => {
     const barber = db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1').get(barber_id);
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
-    // Calculate end time
+    // Calculate end time using actual service duration
     const [h, m] = start_time.split(':').map(Number);
-    const endMin = h * 60 + m + SLOT_DURATION;
+    const endMin = h * 60 + m + service.duration;
     const end_time = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
 
     // Check conflict
@@ -146,7 +149,7 @@ router.post('/book', (req, res) => {
     db.prepare(`
       INSERT INTO appointments (client_id, barber_id, service_id, date, start_time, end_time, duration, status, price)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-    `).run(client.id, barber_id, service.id, date, start_time, end_time, SLOT_DURATION, service.price);
+    `).run(client.id, barber_id, service.id, date, start_time, end_time, service.duration, service.price);
 
     res.status(201).json({
       message: 'התור נקבע בהצלחה!',
