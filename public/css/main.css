@@ -297,12 +297,14 @@ tr:hover { background: rgba(79,70,229,.02); }
   .sidebar {
     transform: translateX(calc(100% + 10px));
     width: 280px;
+    border-left: none;
   }
-  .sidebar.open { transform: translateX(0); box-shadow: -5px 0 25px rgba(0,0,0,.15); }
-  .sidebar-toggle { display: block; }
+  .sidebar.open { transform: translateX(0); box-shadow: -5px 0 25px rgba(0,0,0,.15); border-left: 1px solid var(--border); }
+  .sidebar-toggle { display: flex !important; align-items: center; justify-content: center; width: 44px; height: 44px; font-size: 1.4rem; flex-shrink: 0; position: relative; z-index: 60; }
   .main-content { margin-right: 0; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-card:hover { transform: none; }
   .form-row { grid-template-columns: 1fr; }
   .calendar-grid.weekly { grid-template-columns: 50px repeat(7, 1fr); }
   .calendar-appt { font-size: .65rem; }
