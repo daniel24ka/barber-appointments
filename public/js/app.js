@@ -100,10 +100,12 @@ function navigate(page) {
   };
   if (renderers[page]) renderers[page]();
 
-  // Close sidebar on mobile
-  document.getElementById('sidebar').classList.remove('open');
-  const overlay = document.getElementById('sidebarOverlay');
-  if (overlay) overlay.classList.add('hidden');
+  // Close sidebar on mobile only
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
 }
 
 // === Dashboard ===
@@ -1112,19 +1114,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
 
-  // Sidebar toggle with overlay
-  function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    const isOpen = sidebar.classList.toggle('open');
-    if (isOpen) overlay.classList.remove('hidden');
-    else overlay.classList.add('hidden');
+  // Sidebar toggle - mobile only
+  function isMobile() { return window.innerWidth <= 768; }
+  function openSidebar() {
+    if (!isMobile()) return;
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   }
   function closeSidebar() {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebarOverlay').classList.add('hidden');
+    document.body.style.overflow = '';
   }
-  document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebarToggle').addEventListener('click', function() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.classList.contains('open')) closeSidebar();
+    else openSidebar();
+  });
   document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
   // Auto-login if token exists
