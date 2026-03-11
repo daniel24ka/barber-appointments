@@ -102,6 +102,8 @@ function navigate(page) {
 
   // Close sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (overlay) overlay.classList.add('hidden');
 }
 
 // === Dashboard ===
@@ -310,7 +312,13 @@ function renderDailyCalendar(appts, d) {
 
   hours.forEach(time => {
     html += `<div class="time-cell">${time}</div>`;
-    const cellAppts = appts.filter(a => a.start_time === time);
+    const [th, tm] = time.split(':').map(Number);
+    const slotMin = th * 60 + tm;
+    const cellAppts = appts.filter(a => {
+      const [ah, am] = a.start_time.split(':').map(Number);
+      const aMin = ah * 60 + am;
+      return aMin >= slotMin && aMin < slotMin + 30;
+    });
     html += `<div class="calendar-cell" onclick="quickBook('${dateStr(d)}','${time}')">`;
     cellAppts.forEach(a => {
       html += `<div class="calendar-appt" style="background:${a.barber_color || '#4F46E5'};padding:.4rem .6rem" onclick="event.stopPropagation();viewAppointment(${a.id})">
@@ -1104,10 +1112,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
 
-  // Sidebar toggle
-  document.getElementById('sidebarToggle').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
-  });
+  // Sidebar toggle with overlay
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const isOpen = sidebar.classList.toggle('open');
+    if (isOpen) overlay.classList.remove('hidden');
+    else overlay.classList.add('hidden');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.add('hidden');
+  }
+  document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
   // Auto-login if token exists
   if (App.token && App.user) { showApp(); }

@@ -5,63 +5,7 @@ const { authenticateToken, requireRole } = require('../../middleware/auth');
 
 router.use(authenticateToken);
 
-// Get appointments with filters
-router.get('/', (req, res) => {
-  try {
-    const db = getDb();
-    const { date, barber_id, status, start_date, end_date, client_id } = req.query;
-
-    let sql = `
-      SELECT a.*, c.name as client_name, c.phone as client_phone,
-             b.name as barber_name, b.color as barber_color,
-             s.name as service_name, s.color as service_color
-      FROM appointments a
-      JOIN clients c ON a.client_id = c.id
-      JOIN barbers b ON a.barber_id = b.id
-      JOIN services s ON a.service_id = s.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (date) { sql += ' AND a.date = ?'; params.push(date); }
-    if (barber_id) { sql += ' AND a.barber_id = ?'; params.push(barber_id); }
-    if (status) { sql += ' AND a.status = ?'; params.push(status); }
-    if (client_id) { sql += ' AND a.client_id = ?'; params.push(client_id); }
-    if (start_date && end_date) { sql += ' AND a.date BETWEEN ? AND ?'; params.push(start_date, end_date); }
-
-    sql += ' ORDER BY a.date ASC, a.start_time ASC';
-
-    const appointments = db.prepare(sql).all(...params);
-    res.json(appointments);
-  } catch (err) {
-    console.error('Get appointments error:', err);
-    res.status(500).json({ error: 'שגיאה בטעינת תורים' });
-  }
-});
-
-// Get single appointment
-router.get('/:id', (req, res) => {
-  try {
-    const db = getDb();
-    const appt = db.prepare(`
-      SELECT a.*, c.name as client_name, c.phone as client_phone, c.email as client_email,
-             b.name as barber_name, s.name as service_name
-      FROM appointments a
-      JOIN clients c ON a.client_id = c.id
-      JOIN barbers b ON a.barber_id = b.id
-      JOIN services s ON a.service_id = s.id
-      WHERE a.id = ?
-    `).get(req.params.id);
-
-    if (!appt) return res.status(404).json({ error: 'תור לא נמצא' });
-    res.json(appt);
-  } catch (err) {
-    console.error('Get appointment error:', err);
-    res.status(500).json({ error: 'שגיאה בטעינת תור' });
-  }
-});
-
-// Check availability
+// Check availability (must be before /:id)
 router.get('/check/availability', (req, res) => {
   try {
     const db = getDb();
@@ -112,7 +56,7 @@ router.get('/check/availability', (req, res) => {
   }
 });
 
-// Get available slots for a barber on a date
+// Get available slots for a barber on a date (must be before /:id)
 router.get('/slots/:barber_id/:date', (req, res) => {
   try {
     const db = getDb();
@@ -168,6 +112,62 @@ router.get('/slots/:barber_id/:date', (req, res) => {
   } catch (err) {
     console.error('Get slots error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת משבצות' });
+  }
+});
+
+// Get appointments with filters
+router.get('/', (req, res) => {
+  try {
+    const db = getDb();
+    const { date, barber_id, status, start_date, end_date, client_id } = req.query;
+
+    let sql = `
+      SELECT a.*, c.name as client_name, c.phone as client_phone,
+             b.name as barber_name, b.color as barber_color,
+             s.name as service_name, s.color as service_color
+      FROM appointments a
+      JOIN clients c ON a.client_id = c.id
+      JOIN barbers b ON a.barber_id = b.id
+      JOIN services s ON a.service_id = s.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (date) { sql += ' AND a.date = ?'; params.push(date); }
+    if (barber_id) { sql += ' AND a.barber_id = ?'; params.push(barber_id); }
+    if (status) { sql += ' AND a.status = ?'; params.push(status); }
+    if (client_id) { sql += ' AND a.client_id = ?'; params.push(client_id); }
+    if (start_date && end_date) { sql += ' AND a.date BETWEEN ? AND ?'; params.push(start_date, end_date); }
+
+    sql += ' ORDER BY a.date ASC, a.start_time ASC';
+
+    const appointments = db.prepare(sql).all(...params);
+    res.json(appointments);
+  } catch (err) {
+    console.error('Get appointments error:', err);
+    res.status(500).json({ error: 'שגיאה בטעינת תורים' });
+  }
+});
+
+// Get single appointment
+router.get('/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const appt = db.prepare(`
+      SELECT a.*, c.name as client_name, c.phone as client_phone, c.email as client_email,
+             b.name as barber_name, s.name as service_name
+      FROM appointments a
+      JOIN clients c ON a.client_id = c.id
+      JOIN barbers b ON a.barber_id = b.id
+      JOIN services s ON a.service_id = s.id
+      WHERE a.id = ?
+    `).get(req.params.id);
+
+    if (!appt) return res.status(404).json({ error: 'תור לא נמצא' });
+    res.json(appt);
+  } catch (err) {
+    console.error('Get appointment error:', err);
+    res.status(500).json({ error: 'שגיאה בטעינת תור' });
   }
 });
 
