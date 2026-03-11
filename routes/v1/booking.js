@@ -98,8 +98,9 @@ router.post('/book', (req, res) => {
       return res.status(400).json({ error: 'נא למלא את כל השדות' });
     }
 
-    // Validate phone format
-    if (!/^0\d{1,2}-?\d{7}$/.test(client_phone.replace(/\s/g, ''))) {
+    // Validate phone format (allow dashes and spaces anywhere)
+    const cleanPhone = client_phone.replace(/[-\s]/g, '');
+    if (!/^0\d{8,9}$/.test(cleanPhone)) {
       return res.status(400).json({ error: 'מספר טלפון לא תקין' });
     }
 
@@ -135,9 +136,9 @@ router.post('/book', (req, res) => {
     }
 
     // Find or create client
-    let client = db.prepare('SELECT * FROM clients WHERE phone = ?').get(client_phone.replace(/\s/g, ''));
+    let client = db.prepare('SELECT * FROM clients WHERE phone = ?').get(cleanPhone);
     if (!client) {
-      const result = db.prepare('INSERT INTO clients (name, phone) VALUES (?, ?)').run(client_name.trim(), client_phone.replace(/\s/g, ''));
+      const result = db.prepare('INSERT INTO clients (name, phone) VALUES (?, ?)').run(client_name.trim(), cleanPhone);
       client = { id: result.lastInsertRowid };
     }
 
