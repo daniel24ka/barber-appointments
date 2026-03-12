@@ -1,4 +1,4 @@
-const CACHE_NAME = 'danitech-v1';
+const CACHE_NAME = 'danitech-v2';
 const STATIC_ASSETS = [
   '/',
   '/css/main.css',
@@ -42,14 +42,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache first, falling back to network for everything else
+  // Network first for JS/CSS (so deploys take effect immediately), cache fallback for offline
+  const isAppAsset = url.pathname.endsWith('.js') || url.pathname.endsWith('.css');
+  if (isAppAsset) {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        if (response.ok) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache first, falling back to network for other static assets (images, fonts, etc.)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).then((response) => {
-        // Cache successful responses for static assets
         if (response.ok && event.request.method === 'GET') {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
