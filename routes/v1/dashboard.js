@@ -108,4 +108,95 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// Revenue reports
+router.get('/revenue', async (req, res) => {
+  try {
+    const db = getDb();
+    const numMonths = parseInt(req.query.months) || 6;
+
+    // Monthly revenue for last N months
+    const monthlyRevenue = [];
+    for (let i = numMonths - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const monthStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      const monthEnd = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
+
+      const row = await db.prepare(
+        "SELECT COALESCE(SUM(price), 0) as revenue, COUNT(*) as count FROM appointments WHERE date >= ? AND date < ? AND status = 'completed'"
+      ).get(monthStart, monthEnd);
+
+      monthlyRevenue.push({
+        month: monthStart.substring(0, 7),
+        label: `${d.getMonth() + 1}/${d.getFullYear()}`,
+        revenue: row.revenue,
+        count: row.count
+      });
+    }
+
+    // Revenue by barber (current month)
+    const now = new Date();
+    const curMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const revenueByBarber = await db.prepare(`
+      SELECT b.id, b.name, b.color, COALESCE(SUM(a.price), 0) as revenue, COUNT(a.id) as count
+      FROM barbers b
+      LEFT JOIN appointments a ON a.barber_id = b.id AND a.date >= ? AND a.status = 'completed'
+      WHERE b.active = 1
+      GROUP BY b.id, b.name, b.color
+      ORDER BY revenue DESC
+    `).all(curMonthStart);
+
+    // Revenue by service (current month)
+    const revenueByService = await db.prepare(`
+      SELECT s.id, s.name, s.color, COALESCE(SUM(a.price), 0) as revenue, COUNT(a.id) as count
+      FROM services s
+      LEFT JOIN appointments a ON a.service_id = s.id AND a.date >= ? AND a.status = 'completed'
+      WHERE s.active = 1
+      GROUP BY s.id, s.name, s.color
+      ORDER BY revenue DESC
+    `).all(curMonthStart);
+
+    // Weekly revenue (last 4 weeks)
+    const weeklyRevenue = [];
+    for (let i = 3; i >= 0; i--) {
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - i * 7);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+
+      const ws = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+      const we = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
+
+      const row = await db.prepare(
+        "SELECT COALESCE(SUM(price), 0) as revenue, COUNT(*) as count FROM appointments WHERE date >= ? AND date <= ? AND status = 'completed'"
+      ).get(ws, we);
+
+      weeklyRevenue.push({
+        start: ws,
+        end: we,
+        label: `${weekStart.getDate()}/${weekStart.getMonth() + 1} - ${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`,
+        revenue: row.revenue,
+        count: row.count
+      });
+    }
+
+    // Summary
+    const totalRevenue = monthlyRevenue.reduce((s, m) => s + m.revenue, 0);
+    const totalAppointments = monthlyRevenue.reduce((s, m) => s + m.count, 0);
+    const avgPerAppointment = totalAppointments > 0 ? Math.round(totalRevenue / totalAppointments) : 0;
+
+    res.json({
+      monthlyRevenue,
+      weeklyRevenue,
+      revenueByBarber,
+      revenueByService,
+      summary: { totalRevenue, totalAppointments, avgPerAppointment }
+    });
+  } catch (err) {
+    console.error('Revenue report error:', err);
+    res.status(500).json({ error: 'שגיאה בטעינת דוחות' });
+  }
+});
+
 module.exports = router;

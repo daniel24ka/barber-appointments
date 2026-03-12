@@ -112,14 +112,14 @@ function navigate(page) {
   const titles = {
     dashboard: 'לוח בקרה', calendar: 'יומן תורים', appointments: 'רשימת תורים',
     newAppointment: 'תור חדש', clients: 'לקוחות', barbers: 'ספרים',
-    services: 'שירותים', settings: 'הגדרות'
+    services: 'שירותים', reports: 'דוחות הכנסות', settings: 'הגדרות'
   };
   document.getElementById('pageTitle').textContent = titles[page] || '';
 
   const renderers = {
     dashboard: renderDashboard, calendar: renderCalendar, appointments: renderAppointments,
     newAppointment: renderNewAppointment, clients: renderClients, barbers: renderBarbers,
-    services: renderServices, settings: renderSettings
+    services: renderServices, reports: renderReports, settings: renderSettings
   };
   if (renderers[page]) renderers[page]();
 
@@ -1269,6 +1269,123 @@ async function deleteService(id) {
     renderServices();
     App.data.services = await api('/services');
   } catch(e) { toast(e.message, 'error'); }
+}
+
+// === Reports ===
+async function renderReports() {
+  const area = document.getElementById('contentArea');
+  area.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>טוען דוחות...</h3></div>';
+
+  try {
+    const data = await api('/dashboard/revenue');
+
+    const maxMonthly = Math.max(...data.monthlyRevenue.map(m => m.revenue), 1);
+    const maxWeekly = Math.max(...data.weeklyRevenue.map(w => w.revenue), 1);
+
+    area.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon green"><i class="fas fa-shekel-sign"></i></div><div class="stat-info"><h4>הכנסות (${data.monthlyRevenue.length} חודשים)</h4><div class="stat-value">₪${data.summary.totalRevenue.toLocaleString()}</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-calendar-check"></i></div><div class="stat-info"><h4>תורים שהושלמו</h4><div class="stat-value">${data.summary.totalAppointments}</div></div></div>
+        <div class="stat-card"><div class="stat-icon cyan"><i class="fas fa-receipt"></i></div><div class="stat-info"><h4>ממוצע לתור</h4><div class="stat-value">₪${data.summary.avgPerAppointment}</div></div></div>
+      </div>
+
+      <!-- Monthly Trend -->
+      <div class="card" style="margin-top:1rem">
+        <div class="card-header"><h3><i class="fas fa-chart-line"></i> מגמת הכנסות חודשית</h3></div>
+        <div class="revenue-chart" style="display:flex;align-items:flex-end;gap:4px;height:180px;padding:1rem 0.5rem 0">
+          ${data.monthlyRevenue.map(m => `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font-size:.7rem;font-weight:600;color:var(--primary)">₪${m.revenue.toLocaleString()}</span>
+              <div style="width:100%;background:linear-gradient(to top,var(--primary),var(--primary-light));border-radius:6px 6px 0 0;height:${Math.max((m.revenue/maxMonthly)*130, 4)}px;transition:height .3s"></div>
+              <span style="font-size:.7rem;color:var(--text-secondary)">${m.label}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Weekly Trend -->
+      <div class="card" style="margin-top:1rem">
+        <div class="card-header"><h3><i class="fas fa-chart-bar"></i> הכנסות שבועיות (4 שבועות אחרונים)</h3></div>
+        <div class="revenue-chart" style="display:flex;align-items:flex-end;gap:8px;height:160px;padding:1rem 0.5rem 0">
+          ${data.weeklyRevenue.map(w => `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font-size:.75rem;font-weight:600;color:#10B981">₪${w.revenue.toLocaleString()}</span>
+              <div style="width:100%;background:linear-gradient(to top,#10B981,#6EE7B7);border-radius:6px 6px 0 0;height:${Math.max((w.revenue/maxWeekly)*110, 4)}px;transition:height .3s"></div>
+              <span style="font-size:.7rem;color:var(--text-secondary);text-align:center">${w.label}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="dashboard-grid" style="margin-top:1rem">
+        <!-- Revenue by Barber -->
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-user-tie"></i> הכנסות לפי ספר (חודש נוכחי)</h3></div>
+          ${data.revenueByBarber.length ? data.revenueByBarber.map(b => {
+            const maxB = Math.max(...data.revenueByBarber.map(x => x.revenue), 1);
+            return `
+            <div style="padding:.6rem .75rem;border-bottom:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span><span class="color-dot" style="background:${escAttr(b.color)}"></span> <strong>${escHtml(b.name)}</strong></span>
+                <span style="font-weight:600;color:var(--primary)">₪${b.revenue.toLocaleString()} <small style="color:var(--text-secondary)">(${b.count} תורים)</small></span>
+              </div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${(b.revenue/maxB)*100}%;background:${b.color};border-radius:3px;transition:width .3s"></div>
+              </div>
+            </div>`;
+          }).join('') : '<div class="empty-state" style="padding:1rem"><small>אין נתונים החודש</small></div>'}
+        </div>
+
+        <!-- Revenue by Service -->
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-concierge-bell"></i> הכנסות לפי שירות (חודש נוכחי)</h3></div>
+          ${data.revenueByService.length ? data.revenueByService.map(s => {
+            const maxS = Math.max(...data.revenueByService.map(x => x.revenue), 1);
+            return `
+            <div style="padding:.6rem .75rem;border-bottom:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span><span class="color-dot" style="background:${escAttr(s.color)}"></span> <strong>${escHtml(s.name)}</strong></span>
+                <span style="font-weight:600;color:#10B981">₪${s.revenue.toLocaleString()} <small style="color:var(--text-secondary)">(${s.count} תורים)</small></span>
+              </div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${(s.revenue/maxS)*100}%;background:${s.color};border-radius:3px;transition:width .3s"></div>
+              </div>
+            </div>`;
+          }).join('') : '<div class="empty-state" style="padding:1rem"><small>אין נתונים החודש</small></div>'}
+        </div>
+      </div>
+
+      <!-- CSV Export -->
+      <div class="card" style="margin-top:1rem">
+        <div class="card-header"><h3><i class="fas fa-file-csv"></i> ייצוא נתונים</h3></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;padding:.5rem 0">
+          <button class="btn btn-outline" onclick="exportCsv('clients')"><i class="fas fa-users"></i> ייצוא לקוחות CSV</button>
+          <button class="btn btn-outline" onclick="exportCsv('appointments')"><i class="fas fa-calendar"></i> ייצוא תורים CSV</button>
+          <button class="btn btn-outline" onclick="exportCsv('revenue')"><i class="fas fa-shekel-sign"></i> ייצוא הכנסות CSV</button>
+        </div>
+      </div>
+    `;
+  } catch(e) { area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>${escHtml(e.message)}</h3></div>`; }
+}
+
+function exportCsv(type) {
+  const token = App.token;
+  fetch(`/api/export/${type}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }).then(res => {
+    if (!res.ok) throw new Error('Export failed');
+    return res.blob();
+  }).then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(`הקובץ ${type}.csv יוצא בהצלחה`);
+  }).catch(e => toast('שגיאה בייצוא: ' + e.message, 'error'));
 }
 
 // === Settings ===

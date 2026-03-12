@@ -190,6 +190,44 @@ router.post('/book', async (req, res) => {
   }
 });
 
+// Lookup returning client by phone (public)
+router.get('/client-lookup/:phone', async (req, res) => {
+  try {
+    const db = getDb();
+    const cleanPhone = req.params.phone.replace(/[-\s]/g, '');
+    if (cleanPhone.length < 9) return res.json({ found: false });
+
+    const client = await db.prepare('SELECT id, name, phone, total_visits, vip, last_visit FROM clients WHERE phone = ?').get(cleanPhone);
+    if (!client) return res.json({ found: false });
+
+    // Get last completed appointment with barber + service names
+    const lastAppt = await db.prepare(`
+      SELECT a.date, a.start_time, b.id as barber_id, b.name as barber_name, s.id as service_id, s.name as service_name
+      FROM appointments a
+      JOIN barbers b ON a.barber_id = b.id
+      JOIN services s ON a.service_id = s.id
+      WHERE a.client_id = ? AND a.status = 'completed'
+      ORDER BY a.date DESC, a.start_time DESC
+      LIMIT 1
+    `).get(client.id);
+
+    res.json({
+      found: true,
+      client: {
+        id: client.id,
+        name: client.name,
+        total_visits: client.total_visits,
+        vip: client.vip,
+        last_visit: client.last_visit
+      },
+      lastAppointment: lastAppt || null
+    });
+  } catch (err) {
+    console.error('Client lookup error:', err);
+    res.json({ found: false });
+  }
+});
+
 // Get shop info (public)
 router.get('/info', async (req, res) => {
   try {
