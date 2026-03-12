@@ -30,8 +30,9 @@ function resolveTenantBySlug(req, res, next) {
 // Inject tenant_id from authenticated user's JWT token
 function requireTenant(req, res, next) {
   if (req.user && req.user.role === 'super_admin') {
-    // Super admin can specify tenant_id via query, or falls back to their own tenant_id (1)
-    req.tenantId = req.query.tenant_id ? parseInt(req.query.tenant_id) : (req.user.tenant_id || 1);
+    // Super admin must explicitly specify tenant_id via query param
+    // If not specified, tenantId stays null (super admin dashboard shows system-wide data)
+    req.tenantId = req.query.tenant_id ? parseInt(req.query.tenant_id) : null;
     return next();
   }
 

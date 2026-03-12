@@ -12,7 +12,12 @@ const App = {
 async function api(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (App.token) headers['Authorization'] = `Bearer ${App.token}`;
-  const res = await fetch(`/api${endpoint}`, { ...options, headers });
+  // If super admin is viewing a specific tenant, inject tenant_id into the URL
+  let url = `/api${endpoint}`;
+  if (App.viewingTenantId && App.user?.role === 'super_admin' && !endpoint.includes('tenant_id=') && !endpoint.includes('/super-stats') && !endpoint.includes('/tenants')) {
+    url += (endpoint.includes('?') ? '&' : '?') + `tenant_id=${App.viewingTenantId}`;
+  }
+  const res = await fetch(url, { ...options, headers });
   const data = await res.json();
   if (res.status === 401 || res.status === 403) { sessionExpired(); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(data.error || 'שגיאה');
@@ -76,7 +81,47 @@ async function showApp() {
   document.getElementById('moreMenuUser').textContent = App.user.display_name;
   document.getElementById('todayDate').textContent = formatDate(new Date());
 
-  if (App.user.role !== 'admin' && App.user.role !== 'super_admin') {
+  // === SUPER ADMIN: completely different UI ===
+  if (App.user.role === 'super_admin') {
+    // Hide regular bottom nav items (תורים, יומן, תור חדש)
+    document.querySelectorAll('.bottom-nav-item').forEach(item => {
+      const page = item.dataset.page;
+      if (page === 'dashboard' || page === 'more') {
+        item.style.display = ''; // keep dashboard & more
+      } else {
+        item.style.display = 'none'; // hide appointments, calendar, newAppointment
+      }
+    });
+    // Rename dashboard icon/label for super admin
+    const dashNav = document.querySelector('.bottom-nav-item[data-page="dashboard"]');
+    if (dashNav) {
+      const icon = dashNav.querySelector('i');
+      const label = dashNav.querySelector('span');
+      if (icon) icon.className = 'fas fa-building';
+      if (label) label.textContent = 'ניהול';
+    }
+
+    // Configure more menu for super admin - only settings & logout
+    const moreMenuSheet = document.querySelector('.more-menu-sheet');
+    if (moreMenuSheet) {
+      // Hide tenant-specific menu items
+      moreMenuSheet.querySelectorAll('.more-menu-item').forEach(item => {
+        const page = item.dataset?.page;
+        if (page === 'clients' || page === 'barbers' || page === 'services' || page === 'reports') {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    // Set shop name to DaniTech
+    document.getElementById('shopName').textContent = 'DaniTech - ניהול מערכת';
+
+    navigate('dashboard');
+    return;
+  }
+
+  // === REGULAR USERS (admin, barber, client) ===
+  if (App.user.role !== 'admin') {
     // Non-admin: show settings as "profile" for password change
     const settingsNav = document.getElementById('settingsNav');
     if (settingsNav) {
@@ -87,40 +132,6 @@ async function showApp() {
     if (settingsMore) {
       const label = settingsMore.querySelector('span');
       if (label && label.textContent === 'הגדרות') label.textContent = 'פרופיל';
-    }
-  }
-
-  // Super admin: add tenants management nav link (desktop sidebar + mobile more menu)
-  if (App.user.role === 'super_admin') {
-    // Desktop sidebar
-    const sidebarNav = document.querySelector('.sidebar-nav');
-    if (sidebarNav && !sidebarNav.querySelector('[data-page="tenants"]')) {
-      const tenantsLink = document.createElement('a');
-      tenantsLink.href = '#';
-      tenantsLink.className = 'nav-item';
-      tenantsLink.dataset.page = 'tenants';
-      tenantsLink.innerHTML = '<i class="fas fa-building"></i><span>ניהול עסקים</span>';
-      tenantsLink.addEventListener('click', (e) => { e.preventDefault(); navigate('tenants'); });
-      const settingsNav = document.getElementById('settingsNav');
-      if (settingsNav) sidebarNav.insertBefore(tenantsLink, settingsNav);
-      else sidebarNav.appendChild(tenantsLink);
-    }
-    // Mobile more menu (bottom sheet)
-    const moreMenuSheet = document.querySelector('.more-menu-sheet');
-    if (moreMenuSheet && !moreMenuSheet.querySelector('[data-page="tenants"]')) {
-      const tenantsMoreLink = document.createElement('a');
-      tenantsMoreLink.href = '#';
-      tenantsMoreLink.className = 'more-menu-item';
-      tenantsMoreLink.dataset.page = 'tenants';
-      tenantsMoreLink.innerHTML = '<i class="fas fa-building"></i> ניהול עסקים';
-      tenantsMoreLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('moreMenu').classList.add('hidden');
-        navigate('tenants');
-      });
-      const settingsMoreNav = document.getElementById('settingsMoreNav');
-      if (settingsMoreNav) moreMenuSheet.insertBefore(tenantsMoreLink, settingsMoreNav);
-      else moreMenuSheet.appendChild(tenantsMoreLink);
     }
   }
 
@@ -252,6 +263,11 @@ async function renderDashboard() {
   const area = document.getElementById('contentArea');
   area.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>טוען...</h3></div>';
 
+  // Super admin gets system-wide dashboard (unless viewing a specific tenant)
+  if (App.user.role === 'super_admin' && !App.viewingTenantId) {
+    return renderSuperAdminDashboard();
+  }
+
   try {
     const stats = await api('/dashboard/stats');
 
@@ -362,6 +378,143 @@ async function renderDashboard() {
       </div>
     `;
   } catch(e) { area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>${escHtml(e.message)}</h3></div>`; }
+}
+
+// === Super Admin Dashboard ===
+async function renderSuperAdminDashboard() {
+  const area = document.getElementById('contentArea');
+  area.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>טוען נתוני מערכת...</h3></div>';
+
+  try {
+    const stats = await api('/dashboard/super-stats');
+
+    area.innerHTML = `
+      <div style="margin-bottom:1.5rem">
+        <h2 style="font-size:1.4rem;font-weight:700;margin:0"><i class="fas fa-building" style="color:var(--primary)"></i> לוח בקרה - DaniTech</h2>
+        <p style="color:var(--text-secondary);margin:0.25rem 0 0">סקירה כללית של כל העסקים במערכת</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-store"></i></div><div class="stat-info"><h4>עסקים פעילים</h4><div class="stat-value">${stats.activeTenants} <small style="font-size:0.7rem;color:var(--text-secondary)">/ ${stats.totalTenants}</small></div></div></div>
+        <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h4>בתקופת ניסיון</h4><div class="stat-value">${stats.trialTenants}</div></div></div>
+        <div class="stat-card"><div class="stat-icon green"><i class="fas fa-users"></i></div><div class="stat-info"><h4>סה"כ לקוחות</h4><div class="stat-value">${stats.totalClients}</div></div></div>
+        <div class="stat-card"><div class="stat-icon cyan"><i class="fas fa-user-tie"></i></div><div class="stat-info"><h4>סה"כ ספרים</h4><div class="stat-value">${stats.totalBarbers}</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-calendar-check"></i></div><div class="stat-info"><h4>תורים היום</h4><div class="stat-value">${stats.todayAppointments}</div></div></div>
+        <div class="stat-card"><div class="stat-icon green"><i class="fas fa-shekel-sign"></i></div><div class="stat-info"><h4>הכנסות החודש</h4><div class="stat-value">₪${stats.monthRevenue}</div></div></div>
+      </div>
+
+      <div class="card" style="margin-top:1.25rem">
+        <div class="card-header">
+          <h3><i class="fas fa-store"></i> רשימת עסקים</h3>
+          <button class="btn btn-sm btn-primary" onclick="navigate('tenants')"><i class="fas fa-cog"></i> ניהול מלא</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>עסק</th><th>תוכנית</th><th>לקוחות</th><th>ספרים</th><th>תורים היום</th><th>הכנסות החודש</th><th>סטטוס</th><th>פעולות</th></tr></thead>
+            <tbody>
+              ${stats.tenants && stats.tenants.length ? stats.tenants.map(t => {
+                const planLabels = { trial: 'ניסיון', basic: 'בסיסי', premium: 'פרימיום' };
+                const planColors = { trial: '#6B7280', basic: '#10B981', premium: '#F59E0B' };
+                const isTrialExpired = t.plan === 'trial' && t.trial_ends_at && new Date(t.trial_ends_at) < new Date();
+                return `<tr>
+                  <td>
+                    <strong>${escHtml(t.name)}</strong>
+                    <div style="font-size:.78rem;color:var(--text-secondary)">${escHtml(t.owner_name || '')} · <code style="font-size:.72rem">${escHtml(t.slug)}</code></div>
+                  </td>
+                  <td><span class="badge" style="background:${planColors[t.plan] || '#6B7280'};color:#fff">${planLabels[t.plan] || t.plan}</span></td>
+                  <td>${t.client_count || 0}</td>
+                  <td>${t.barber_count || 0}</td>
+                  <td>${t.today_appointments || 0}</td>
+                  <td>₪${t.month_revenue || 0}</td>
+                  <td>${t.active ?
+                    (isTrialExpired ? '<span style="color:#F59E0B"><i class="fas fa-exclamation-triangle"></i> ניסיון פג</span>' : '<span style="color:#10B981"><i class="fas fa-check-circle"></i> פעיל</span>')
+                    : '<span style="color:#EF4444"><i class="fas fa-times-circle"></i> מושבת</span>'}</td>
+                  <td>
+                    <div class="btn-group">
+                      <button class="btn btn-sm btn-outline" onclick="enterTenantView(${t.id}, '${escAttr(t.name)}')" title="כניסה לעסק"><i class="fas fa-sign-in-alt"></i></button>
+                      <button class="btn btn-sm btn-outline" onclick="editTenant(${t.id})" title="עריכה"><i class="fas fa-edit"></i></button>
+                      <a href="/book/${escAttr(t.slug)}" target="_blank" class="btn btn-sm btn-outline" title="דף הזמנה"><i class="fas fa-external-link-alt"></i></a>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('') : '<tr><td colspan="8" class="empty-state">אין עסקים במערכת</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>שגיאה בטעינת נתוני מערכת</h3><p>${escHtml(e.message)}</p></div>`;
+  }
+}
+
+// Enter a specific tenant's view as super admin
+function enterTenantView(tenantId, tenantName) {
+  App.viewingTenantId = tenantId;
+  App.viewingTenantName = tenantName;
+
+  // Show a banner indicating we're viewing a specific tenant
+  let banner = document.getElementById('tenantViewBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'tenantViewBanner';
+    banner.style.cssText = 'background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:0.9rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.15)';
+    document.getElementById('appContainer').prepend(banner);
+  }
+  banner.innerHTML = `
+    <span><i class="fas fa-eye"></i> צופה בעסק: <strong>${escHtml(tenantName)}</strong></span>
+    <button onclick="exitTenantView()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:0.35rem 0.85rem;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:0.85rem"><i class="fas fa-arrow-right"></i> חזרה לניהול</button>
+  `;
+  banner.classList.remove('hidden');
+
+  // Override api calls to include tenant_id
+  App._originalApi = App._originalApi || null;
+
+  // Show regular nav items temporarily
+  document.querySelectorAll('.bottom-nav-item').forEach(item => {
+    item.style.display = '';
+  });
+
+  // Reload data for the selected tenant
+  loadTenantData(tenantId);
+}
+
+async function loadTenantData(tenantId) {
+  try {
+    const [barbers, services, settings] = await Promise.all([
+      api(`/barbers?tenant_id=${tenantId}`),
+      api(`/services?tenant_id=${tenantId}`),
+      api(`/settings?tenant_id=${tenantId}`)
+    ]);
+    App.data.barbers = barbers;
+    App.data.services = services;
+    App.data.settings = settings;
+    if (settings.shop_name) document.getElementById('shopName').textContent = settings.shop_name;
+    navigate('dashboard');
+  } catch(e) {
+    toast('שגיאה בטעינת נתוני עסק', 'error');
+  }
+}
+
+function exitTenantView() {
+  App.viewingTenantId = null;
+  App.viewingTenantName = null;
+
+  const banner = document.getElementById('tenantViewBanner');
+  if (banner) banner.remove();
+
+  // Re-hide regular nav items for super admin
+  document.querySelectorAll('.bottom-nav-item').forEach(item => {
+    const page = item.dataset.page;
+    if (page === 'dashboard' || page === 'more') {
+      item.style.display = '';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  document.getElementById('shopName').textContent = 'DaniTech - ניהול מערכת';
+  navigate('dashboard');
 }
 
 async function updateApptStatus(id, status) {

@@ -204,4 +204,53 @@ router.get('/revenue', async (req, res) => {
   }
 });
 
+// Super admin aggregate stats (across all tenants)
+router.get('/super-stats', async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'אין הרשאה' });
+    }
+    const db = getDb();
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const monthStart = today.substring(0, 7) + '-01';
+
+    // Aggregate stats across ALL tenants
+    const totalTenants = (await db.prepare("SELECT COUNT(*) as c FROM tenants").get()).c;
+    const activeTenants = (await db.prepare("SELECT COUNT(*) as c FROM tenants WHERE active = 1").get()).c;
+    const trialTenants = (await db.prepare("SELECT COUNT(*) as c FROM tenants WHERE plan = 'trial' AND active = 1").get()).c;
+    const totalClients = (await db.prepare("SELECT COUNT(*) as c FROM clients").get()).c;
+    const totalBarbers = (await db.prepare("SELECT COUNT(*) as c FROM barbers WHERE active = 1").get()).c;
+    const todayAppointments = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(today)).c;
+    const monthAppointments = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date >= ? AND status NOT IN ('cancelled')").get(monthStart)).c;
+    const monthRevenue = (await db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date >= ? AND status = 'completed'").get(monthStart)).total;
+
+    // Per-tenant breakdown
+    const tenants = await db.prepare(`
+      SELECT t.id, t.name, t.slug, t.plan, t.active, t.owner_name, t.owner_phone, t.trial_ends_at,
+        (SELECT COUNT(*) FROM clients c WHERE c.tenant_id = t.id) as client_count,
+        (SELECT COUNT(*) FROM barbers b WHERE b.tenant_id = t.id AND b.active = 1) as barber_count,
+        (SELECT COUNT(*) FROM appointments a WHERE a.tenant_id = t.id AND a.date = $1 AND a.status NOT IN ('cancelled')) as today_appointments,
+        (SELECT COALESCE(SUM(a.price), 0) FROM appointments a WHERE a.tenant_id = t.id AND a.date >= $2 AND a.status = 'completed') as month_revenue
+      FROM tenants t
+      ORDER BY t.created_at DESC
+    `).all(today, monthStart);
+
+    res.json({
+      totalTenants,
+      activeTenants,
+      trialTenants,
+      totalClients,
+      totalBarbers,
+      todayAppointments,
+      monthAppointments,
+      monthRevenue,
+      tenants
+    });
+  } catch (err) {
+    console.error('Super admin stats error:', err);
+    res.status(500).json({ error: 'שגיאה בטעינת נתוני מערכת' });
+  }
+});
+
 module.exports = router;
