@@ -125,11 +125,12 @@ app.use((err, req, res, next) => {
 
 // Validate required env vars
 function validateEnv() {
-  const required = ['DATABASE_URL', 'JWT_SECRET'];
-  const missing = required.filter(key => !process.env[key]);
-  if (missing.length > 0 && process.env.NODE_ENV === 'production') {
-    console.error('Missing required environment variables:', missing.join(', '));
+  if (!process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
+    console.error('Missing required environment variable: DATABASE_URL');
     process.exit(1);
+  }
+  if (!process.env.JWT_SECRET) {
+    console.warn('WARNING: JWT_SECRET not set. Using random key (tokens will reset on restart).');
   }
 }
 
