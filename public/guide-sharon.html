@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מדריך למערכת - שרון</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #818CF8;
+      --primary-dark: #3730A3;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --text: #1E293B;
+      --text-secondary: #64748B;
+      --border: #E2E8F0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text);
+      line-height: 1.8; direction: rtl; max-width: 800px; margin: 0 auto; padding: 1rem;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
+      color: white; border-radius: 20px; padding: 2.5rem 2rem; text-align: center; margin-bottom: 2rem;
+    }
+    .hero h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .hero p { opacity: 0.9; font-size: 1.1rem; }
+    .hero .subtitle { font-size: 0.95rem; opacity: 0.75; margin-top: 0.5rem; }
+
+    .section {
+      background: var(--card); border-radius: 16px; padding: 1.5rem 1.75rem;
+      margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .section h2 {
+      font-size: 1.3rem; color: var(--primary-dark); margin-bottom: 1rem;
+      padding-bottom: 0.5rem; border-bottom: 2px solid var(--border);
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section h2 i { color: var(--primary); }
+
+    .section h3 {
+      font-size: 1.05rem; color: var(--primary); margin: 1rem 0 0.5rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+
+    .step-list { counter-reset: step; list-style: none; padding: 0; }
+    .step-list li {
+      counter-increment: step; padding: 0.6rem 0 0.6rem 0;
+      border-bottom: 1px solid #f1f5f9; position: relative; padding-right: 2.5rem;
+    }
+    .step-list li:last-child { border: none; }
+    .step-list li::before {
+      content: counter(step);
+      position: absolute; right: 0; top: 0.65rem;
+      width: 28px; height: 28px; border-radius: 50%; background: var(--primary);
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem;
+    }
+
+    .benefit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; }
+    .benefit-card {
+      background: #F8FAFC; border-radius: 12px; padding: 1rem;
+      border: 1px solid var(--border); text-align: center;
+    }
+    .benefit-card .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .benefit-card h4 { font-size: 0.95rem; color: var(--primary-dark); margin-bottom: 0.25rem; }
+    .benefit-card p { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .tip-box {
+      background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px;
+      padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.9rem;
+    }
+    .tip-box i { color: var(--warning); margin-left: 0.3rem; }
+
+    .highlight-box {
+      background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px;
+      padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.9rem;
+    }
+    .highlight-box i { color: var(--success); margin-left: 0.3rem; }
+
+    .warning-box {
+      background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px;
+      padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.9rem;
+    }
+    .warning-box i { color: var(--danger); margin-left: 0.3rem; }
+
+    .feature-tag {
+      display: inline-block; padding: 0.15rem 0.6rem; border-radius: 99px;
+      font-size: 0.75rem; font-weight: 600; color: white; margin: 0.15rem;
+    }
+
+    table {
+      width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.9rem;
+    }
+    th, td {
+      padding: 0.6rem 0.75rem; text-align: right; border-bottom: 1px solid var(--border);
+    }
+    th { background: #F8FAFC; font-weight: 600; color: var(--primary-dark); }
+
+    .toc { list-style: none; padding: 0; }
+    .toc li {
+      padding: 0.35rem 0; border-bottom: 1px dashed var(--border);
+    }
+    .toc li a {
+      color: var(--primary); text-decoration: none; font-weight: 500;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .toc li a:hover { text-decoration: underline; }
+
+    .footer {
+      text-align: center; padding: 2rem 1rem; color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 0.5rem; }
+      .hero { padding: 1.5rem 1rem; border-radius: 14px; }
+      .hero h1 { font-size: 1.5rem; }
+      .section { padding: 1rem 1.25rem; }
+      .benefit-grid { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { max-width: 100%; padding: 0; font-size: 11pt; }
+      .hero { break-after: avoid; }
+      .section { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <div style="font-size:3rem;margin-bottom:0.5rem"><i class="fas fa-cut"></i></div>
+    <h1>שרון, ברוך הבא למערכת!</h1>
+    <p>המדריך המלא למערכת ניהול התורים שלך</p>
+    <div class="subtitle">תקופת ניסיון: 30 יום &nbsp;|&nbsp; גרסה מלאה &nbsp;|&nbsp; כל הפיצ'רים פתוחים</div>
+  </div>
+
+  <!-- תוכן עניינים -->
+  <div class="section">
+    <h2><i class="fas fa-list-ol"></i> תוכן עניינים</h2>
+    <ul class="toc">
+      <li><a href="#what"><i class="fas fa-chevron-left"></i> מה זה? בשתי מילים</a></li>
+      <li><a href="#benefits"><i class="fas fa-chevron-left"></i> למה זה שווה לך? 5 סיבות</a></li>
+      <li><a href="#login"><i class="fas fa-chevron-left"></i> איך מתחברים</a></li>
+      <li><a href="#dashboard"><i class="fas fa-chevron-left"></i> לוח בקרה - הבית שלך</a></li>
+      <li><a href="#calendar"><i class="fas fa-chevron-left"></i> יומן תורים</a></li>
+      <li><a href="#appointments"><i class="fas fa-chevron-left"></i> ניהול תורים</a></li>
+      <li><a href="#booking"><i class="fas fa-chevron-left"></i> דף הזמנה ללקוחות</a></li>
+      <li><a href="#clients"><i class="fas fa-chevron-left"></i> ניהול לקוחות ולקוחות חוזרים</a></li>
+      <li><a href="#services"><i class="fas fa-chevron-left"></i> ניהול שירותים</a></li>
+      <li><a href="#reports"><i class="fas fa-chevron-left"></i> דוחות הכנסות</a></li>
+      <li><a href="#export"><i class="fas fa-chevron-left"></i> ייצוא נתונים (CSV)</a></li>
+      <li><a href="#settings"><i class="fas fa-chevron-left"></i> הגדרות מערכת</a></li>
+      <li><a href="#mobile"><i class="fas fa-chevron-left"></i> שימוש מהנייד</a></li>
+      <li><a href="#tips"><i class="fas fa-chevron-left"></i> טיפים ליום-יום</a></li>
+      <li><a href="#faq"><i class="fas fa-chevron-left"></i> שאלות נפוצות</a></li>
+    </ul>
+  </div>
+
+  <!-- מה זה -->
+  <div class="section" id="what">
+    <h2><i class="fas fa-info-circle"></i> מה זה? בשתי מילים</h2>
+    <p>
+      המערכת הזאת היא <strong>מערכת ניהול תורים חכמה למספרה</strong>. היא מחליפה את הפנקס, את ההודעות בוואטסאפ, ואת הכאוס.
+    </p>
+    <p style="margin-top:0.5rem">
+      הלקוחות שלך נכנסים לקישור, בוחרים ספר, תאריך ושעה - ומזמינים תור לבד. אתה רואה את הכל בזמן אמת ביומן, מאשר, מבטל, ועוקב אחרי הכנסות.
+    </p>
+
+    <div class="highlight-box">
+      <i class="fas fa-check-circle"></i>
+      <strong>בקיצור:</strong> הלקוח מזמין לבד → אתה מאשר → כולם מרוצים. בלי טלפונים, בלי בלבולים.
+    </div>
+  </div>
+
+  <!-- למה זה שווה -->
+  <div class="section" id="benefits">
+    <h2><i class="fas fa-star"></i> למה זה שווה לך? 5 סיבות</h2>
+    <div class="benefit-grid">
+      <div class="benefit-card">
+        <div class="icon">⏰</div>
+        <h4>חיסכון בזמן</h4>
+        <p>לקוחות מזמינים לבד 24/7. אתה לא צריך לענות לטלפון או להודעות בזמן תספורת</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">📱</div>
+        <h4>הכל מהנייד</h4>
+        <p>המערכת עובדת מושלם מהטלפון. תוכל לנהל תורים גם מהכורסא בבית</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">💰</div>
+        <h4>מעקב הכנסות</h4>
+        <p>תראה בדיוק כמה הרווחת היום, השבוע והחודש. לפי שירות ולפי ספר</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">🔁</div>
+        <h4>לקוחות חוזרים</h4>
+        <p>המערכת מזהה לקוחות חוזרים, מראה להם "ברוך הבא בחזרה!" ומציעה להזמין שוב</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">🚫</div>
+        <h4>אפס בלבולים</h4>
+        <p>אי אפשר להזמין שעה תפוסה. אי אפשר תור כפול. המערכת שומרת עליך</p>
+      </div>
+      <div class="benefit-card">
+        <div class="icon">📊</div>
+        <h4>תמונה מלאה</h4>
+        <p>תדע מי הלקוחות הכי נאמנים, מי לא הגיע זמן רב, ומה השירות הכי רווחי</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- איך מתחברים -->
+  <div class="section" id="login">
+    <h2><i class="fas fa-sign-in-alt"></i> איך מתחברים</h2>
+
+    <h3><i class="fas fa-desktop"></i> כניסה למערכת הניהול (בשבילך)</h3>
+    <ol class="step-list">
+      <li>נכנסים לכתובת המערכת בדפדפן (כרום, ספארי - לא משנה)</li>
+      <li>מזינים את <strong>שם המשתמש</strong> ואת <strong>הסיסמה</strong> שקיבלת</li>
+      <li>לוחצים "התחבר" - ומגיעים ללוח הבקרה</li>
+    </ol>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>טיפ:</strong> אפשר להוסיף את הכתובת למסך הבית של הטלפון (כמו אפליקציה). בכרום: לחץ על שלוש הנקודות → "הוסף למסך הבית"
+    </div>
+
+    <h3><i class="fas fa-key"></i> שינוי סיסמה</h3>
+    <p>אפשר לשנות את הסיסמה בכל זמן: לחץ על <strong>"הגדרות"</strong> (או "פרופיל") בתפריט → הזן סיסמה נוכחית → הזן סיסמה חדשה → שמור.</p>
+  </div>
+
+  <!-- לוח בקרה -->
+  <div class="section" id="dashboard">
+    <h2><i class="fas fa-tachometer-alt"></i> לוח בקרה - הבית שלך</h2>
+    <p>ברגע שמתחברים - זה מה שרואים. זה הדף הראשי, ובו הכל במבט אחד:</p>
+
+    <table>
+      <tr><th>מה מוצג</th><th>מה זה אומר</th></tr>
+      <tr><td><strong>תורים היום</strong></td><td>כמה תורים יש לך היום (לא כולל מבוטלים)</td></tr>
+      <tr><td><strong>ממתינים לאישור</strong></td><td>תורים שלקוחות הזמינו ועדיין לא אישרת. <span style="color:var(--danger)">חשוב לטפל בהם!</span></td></tr>
+      <tr><td><strong>הכנסות היום</strong></td><td>כמה כסף נכנס מתורים שהושלמו היום</td></tr>
+      <tr><td><strong>הכנסות החודש</strong></td><td>סיכום חודשי</td></tr>
+      <tr><td><strong>לקוחות חדשים החודש</strong></td><td>כמה לקוחות חדשים הצטרפו החודש</td></tr>
+      <tr><td><strong>אחוז לקוחות חוזרים</strong></td><td>כמה אחוז מהלקוחות חוזרים יותר מפעם אחת</td></tr>
+      <tr><td><strong>תזכורות</strong></td><td>תורים ממתינים שצריך לאשר או לבטל</td></tr>
+      <tr><td><strong>תורים השבוע</strong></td><td>גרף שמראה כמה תורים בכל יום השבוע</td></tr>
+      <tr><td><strong>לקוחות מובילים</strong></td><td>5 הלקוחות עם הכי הרבה ביקורים</td></tr>
+      <tr><td><strong>לקוחות בסיכון נטישה</strong></td><td>לקוחות שלא הגיעו 30+ יום. כדאי להתקשר אליהם!</td></tr>
+    </table>
+
+    <div class="highlight-box">
+      <i class="fas fa-check-circle"></i>
+      <strong>בבוקר כשמגיעים:</strong> תסתכל על לוח הבקרה → תאשר תורים ממתינים → תבדוק אם יש לקוחות בסיכון שכדאי להתקשר אליהם
+    </div>
+  </div>
+
+  <!-- יומן תורים -->
+  <div class="section" id="calendar">
+    <h2><i class="fas fa-calendar-alt"></i> יומן תורים</h2>
+    <p>זה היומן שלך - כמו לוח שנה, אבל עם תורים. יש שני מצבי תצוגה:</p>
+
+    <h3><i class="fas fa-calendar-week"></i> תצוגה שבועית</h3>
+    <p>רואים שבוע שלם. כל תור מופיע כפס צבעוני ביום ובשעה שלו. הצבע מתאים לספר.</p>
+
+    <h3><i class="fas fa-calendar-day"></i> תצוגה יומית</h3>
+    <p>רואים יום אחד בפירוט מלא - כל חצי שעה. נוח לראות בדיוק מה קורה היום.</p>
+
+    <h3>מה אפשר לעשות מהיומן:</h3>
+    <ul style="padding-right:1.5rem;margin-top:0.5rem">
+      <li><strong>ללחוץ על תור</strong> → לראות פרטים מלאים</li>
+      <li><strong>ללחוץ על משבצת ריקה</strong> → לפתוח טופס תור חדש עם התאריך והשעה שנבחרו</li>
+      <li><strong>לסנן לפי ספר</strong> → לראות רק תורים של ספר מסוים</li>
+      <li><strong>חצים ימינה/שמאלה</strong> → לנווט בין שבועות/ימים</li>
+      <li><strong>כפתור "היום"</strong> → חזרה לתאריך של היום</li>
+    </ul>
+  </div>
+
+  <!-- ניהול תורים -->
+  <div class="section" id="appointments">
+    <h2><i class="fas fa-clock"></i> ניהול תורים</h2>
+
+    <h3><i class="fas fa-list"></i> רשימת תורים</h3>
+    <p>עמוד שמראה את כל התורים לפי תאריך. אפשר לסנן לפי:</p>
+    <ul style="padding-right:1.5rem">
+      <li>תאריך</li>
+      <li>ספר ספציפי</li>
+      <li>סטטוס (ממתין / מאושר / הושלם / בוטל)</li>
+    </ul>
+
+    <h3><i class="fas fa-tasks"></i> סטטוסים של תור</h3>
+    <table>
+      <tr><th>סטטוס</th><th>מה זה אומר</th><th>מה לעשות</th></tr>
+      <tr>
+        <td><span style="background:#F59E0B;color:#fff;padding:2px 8px;border-radius:4px;font-size:.8rem">ממתין</span></td>
+        <td>הלקוח הזמין, צריך אישור</td>
+        <td>לחץ <span style="color:var(--success)">✓ אשר</span> או <span style="color:var(--danger)">✗ בטל</span></td>
+      </tr>
+      <tr>
+        <td><span style="background:var(--primary);color:#fff;padding:2px 8px;border-radius:4px;font-size:.8rem">מאושר</span></td>
+        <td>אישרת, הלקוח אמור להגיע</td>
+        <td>כשהלקוח מגיע → סמן כ"הושלם"</td>
+      </tr>
+      <tr>
+        <td><span style="background:var(--success);color:#fff;padding:2px 8px;border-radius:4px;font-size:.8rem">הושלם</span></td>
+        <td>הלקוח הגיע, התספורת בוצעה</td>
+        <td>נרשם בהכנסות. סיימת!</td>
+      </tr>
+      <tr>
+        <td><span style="background:var(--danger);color:#fff;padding:2px 8px;border-radius:4px;font-size:.8rem">בוטל</span></td>
+        <td>התור בוטל</td>
+        <td>השעה חוזרת להיות פנויה ללקוחות אחרים</td>
+      </tr>
+    </table>
+
+    <div class="warning-box">
+      <i class="fas fa-exclamation-triangle"></i>
+      <strong>חשוב מאוד:</strong> כשלקוח מסיים - תסמן את התור כ"הושלם"! זה מה שמעדכן את ההכנסות, מספר הביקורים של הלקוח, ואת כל הנתונים במערכת.
+    </div>
+
+    <h3><i class="fas fa-plus-circle"></i> קביעת תור חדש (מצד שלך)</h3>
+    <p>מדף "תור חדש" אתה יכול לקבוע תור ידנית:</p>
+    <ol class="step-list">
+      <li>בחר ספר ושירות</li>
+      <li>בחר תאריך - המערכת תראה רק שעות פנויות</li>
+      <li>בחר שעה מהמשבצות הזמינות</li>
+      <li>חפש לקוח קיים (לפי שם או טלפון) או צור לקוח חדש</li>
+      <li>לחץ "קבע תור" - וסיימת!</li>
+    </ol>
+  </div>
+
+  <!-- דף הזמנה ללקוחות -->
+  <div class="section" id="booking">
+    <h2><i class="fas fa-globe"></i> דף הזמנה ללקוחות</h2>
+    <p>
+      זה הדף שהלקוחות שלך רואים. <strong>זה הקישור שאתה שולח ללקוחות</strong> - בוואטסאפ, באינסטגרם, בכרטיס ביקור, באיפה שתרצה.
+    </p>
+
+    <div class="highlight-box">
+      <i class="fas fa-link"></i>
+      <strong>הקישור לדף הזמנה:</strong> כתובת המערכת + <code>/book.html</code>
+    </div>
+
+    <h3>מה הלקוח רואה:</h3>
+    <ol class="step-list">
+      <li><strong>בחירת ספר</strong> - רואה את כל הספרים הפעילים עם שם ותמונה</li>
+      <li><strong>בחירת שירות + תאריך + שעה</strong> - רואה רק שעות פנויות! שעות תפוסות לא מופיעות בכלל. אם ספר בחופש - מופיעה הודעה</li>
+      <li><strong>פרטים אישיים</strong> - מזין טלפון ושם → מאשר הזמנה</li>
+    </ol>
+
+    <h3><i class="fas fa-hand-sparkles"></i> לקוח חוזר - החלק הכי מגניב!</h3>
+    <p>כשלקוח שכבר היה אצלך מזין את הטלפון שלו בדף ההזמנה:</p>
+    <ul style="padding-right:1.5rem">
+      <li>המערכת <strong>מזהה אותו אוטומטית</strong></li>
+      <li>מופיע באנר ירוק: <strong>"!ברוך הבא בחזרה, [שם]"</strong></li>
+      <li>מראה כמה ביקורים עשה ואת דרגת הנאמנות שלו (ארד/כסף/זהב)</li>
+      <li>מציג: <strong>"בפעם האחרונה היית אצל [ספר] ל[שירות]"</strong></li>
+      <li>כפתור <strong>"הזמן שוב את אותו תור"</strong> - שבלחיצה אחת בוחר את אותו ספר ושירות!</li>
+    </ul>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>למה זה חשוב:</strong> לקוח חוזר שרואה שמזהים אותו מרגיש מיוחד. זה מגביר נאמנות. והכפתור "הזמן שוב" מקצר לו את הזמן לשניות.
+    </div>
+
+    <h3><i class="fas fa-shield-alt"></i> הגנות אוטומטיות</h3>
+    <ul style="padding-right:1.5rem">
+      <li>לא ניתן להזמין שעה שכבר תפוסה</li>
+      <li>לא ניתן להזמין תאריך שעבר</li>
+      <li>ימי חופש של ספר לא מציגים שעות</li>
+      <li>ימים שהספר לא עובד בהם - לא מציגים שעות</li>
+    </ul>
+  </div>
+
+  <!-- ניהול לקוחות -->
+  <div class="section" id="clients">
+    <h2><i class="fas fa-users"></i> ניהול לקוחות ומערכת נאמנות</h2>
+
+    <h3><i class="fas fa-id-card"></i> כרטיס לקוח</h3>
+    <p>כל לקוח שמזמין תור נשמר במערכת. בלחיצה על <i class="fas fa-eye"></i> רואים:</p>
+    <ul style="padding-right:1.5rem">
+      <li>שם, טלפון, אימייל</li>
+      <li>מספר ביקורים כולל</li>
+      <li>סה"כ כסף שהוציא</li>
+      <li>ימים מהביקור האחרון</li>
+      <li>אחוז אי-הגעה</li>
+      <li>ספר מועדף (הספר שהכי הרבה הלך אליו)</li>
+      <li>שירות מועדף</li>
+      <li>תדירות ביקורים (כל כמה ימים בממוצע)</li>
+      <li>כל ההיסטוריה של התורים שלו</li>
+    </ul>
+
+    <h3><i class="fas fa-crown"></i> דרגות נאמנות</h3>
+    <table>
+      <tr><th>דרגה</th><th>תנאי</th><th>צבע</th></tr>
+      <tr><td>🆕 חדש</td><td>0-2 ביקורים</td><td>אפור</td></tr>
+      <tr><td>🥉 ארד</td><td>3-9 ביקורים</td><td>חום-ברונזה</td></tr>
+      <tr><td>🥈 כסף</td><td>10-19 ביקורים</td><td>כסוף</td></tr>
+      <tr><td>🥇 זהב</td><td>20+ ביקורים</td><td>זהוב</td></tr>
+    </table>
+    <p>הדרגות מופיעות ליד שם הלקוח בכל מקום - ברשימת לקוחות, ביומן, ובדף ההזמנה.</p>
+
+    <h3><i class="fas fa-exclamation-triangle"></i> לקוחות בסיכון נטישה</h3>
+    <p>המערכת מזהה אוטומטית לקוחות שלא הגיעו זמן רב:</p>
+    <table>
+      <tr><th>סטטוס</th><th>תנאי</th></tr>
+      <tr><td>🟢 תקין</td><td>ביקר ב-30 הימים האחרונים</td></tr>
+      <tr><td>🟡 בסיכון</td><td>לא ביקר 30-60 יום</td></tr>
+      <tr><td>🔴 סיכון גבוה</td><td>לא ביקר 60+ יום</td></tr>
+    </table>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>טיפ:</strong> פעם בשבוע תסתכל על "לקוחות בסיכון נטישה" בלוח הבקרה. תתקשר אליהם ותציע להם לקבוע תור. שיחת טלפון קצרה שווה לקוח נאמן!
+    </div>
+
+    <h3><i class="fas fa-filter"></i> סינון וחיפוש לקוחות</h3>
+    <ul style="padding-right:1.5rem">
+      <li><strong>חיפוש חופשי</strong> - לפי שם או טלפון</li>
+      <li><strong>סינון לפי דרגה</strong> - זהב / כסף / ארד / בסיכון</li>
+      <li><strong>מיון</strong> - לפי שם / לפי מספר ביקורים / לפי ביקור אחרון</li>
+    </ul>
+
+    <h3><i class="fas fa-edit"></i> פעולות על לקוח</h3>
+    <ul style="padding-right:1.5rem">
+      <li><strong>עריכה</strong> - שינוי שם, טלפון, אימייל, הערות, סימון VIP</li>
+      <li><strong>מחיקה</strong> - רק אם אין לו תורים פעילים (ממתינים/מאושרים)</li>
+    </ul>
+  </div>
+
+  <!-- שירותים -->
+  <div class="section" id="services">
+    <h2><i class="fas fa-concierge-bell"></i> ניהול שירותים</h2>
+    <p>כאן מגדירים את כל השירותים שהמספרה מציעה. כל שירות כולל:</p>
+
+    <table>
+      <tr><th>שדה</th><th>הסבר</th><th>דוגמה</th></tr>
+      <tr><td>שם</td><td>שם השירות</td><td>תספורת גברים</td></tr>
+      <tr><td>משך (דקות)</td><td>כמה זמן לוקח השירות</td><td>30 דק'</td></tr>
+      <tr><td>מחיר</td><td>מחיר השירות בשקלים</td><td>₪80</td></tr>
+      <tr><td>צבע</td><td>צבע מזהה ביומן</td><td>ירוק</td></tr>
+    </table>
+
+    <div class="warning-box">
+      <i class="fas fa-exclamation-triangle"></i>
+      <strong>שים לב:</strong> משך השירות משפיע ישירות על השעות הפנויות! אם שירות הוא 60 דקות, המערכת תחסום שעה שלמה ביומן. אם הוא 30 דקות - תחסום חצי שעה בלבד.
+    </div>
+
+    <h3>הוספת שירות חדש</h3>
+    <p>לחץ "+ שירות חדש" → מלא שם, משך ומחיר → שמור. זה יופיע מיד בדף ההזמנה ללקוחות.</p>
+  </div>
+
+  <!-- דוחות -->
+  <div class="section" id="reports">
+    <h2><i class="fas fa-chart-pie"></i> דוחות הכנסות</h2>
+    <p>עמוד הדוחות נותן לך תמונה כספית מלאה. מגיעים אליו מהתפריט → <strong>"דוחות"</strong>.</p>
+
+    <h3><i class="fas fa-chart-line"></i> מה יש בדוחות:</h3>
+
+    <table>
+      <tr><th>דוח</th><th>מה מוצג</th></tr>
+      <tr><td><strong>סיכום כללי</strong></td><td>סה"כ הכנסות, סה"כ תורים שהושלמו, ממוצע הכנסה לתור</td></tr>
+      <tr><td><strong>מגמה חודשית</strong></td><td>גרף עמודות - הכנסות ב-6 החודשים האחרונים. רואים אם עולים או יורדים</td></tr>
+      <tr><td><strong>מגמה שבועית</strong></td><td>גרף של 4 השבועות האחרונים</td></tr>
+      <tr><td><strong>הכנסות לפי ספר</strong></td><td>כמה כל ספר הכניס החודש + כמה תורים עשה</td></tr>
+      <tr><td><strong>הכנסות לפי שירות</strong></td><td>כמה כל שירות הכניס החודש + כמה פעמים הוזמן</td></tr>
+    </table>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>טיפ:</strong> בסוף כל חודש, תיכנס לדוחות ותבדוק: איזה שירות הכי רווחי? איזה ספר הכי עמוס? אולי כדאי לשנות מחירים או להוסיף ספר?
+    </div>
+  </div>
+
+  <!-- ייצוא CSV -->
+  <div class="section" id="export">
+    <h2><i class="fas fa-file-csv"></i> ייצוא נתונים (CSV / Excel)</h2>
+    <p>בתחתית עמוד הדוחות יש 3 כפתורי ייצוא:</p>
+
+    <table>
+      <tr><th>כפתור</th><th>מה מוריד</th><th>למה שימושי</th></tr>
+      <tr><td><strong>ייצוא לקוחות</strong></td><td>קובץ CSV עם כל הלקוחות</td><td>גיבוי, ניתוח, שיווק</td></tr>
+      <tr><td><strong>ייצוא תורים</strong></td><td>קובץ CSV עם כל התורים</td><td>דוח לרואה חשבון, ניתוח ביצועים</td></tr>
+      <tr><td><strong>ייצוא הכנסות</strong></td><td>קובץ CSV עם הכנסות לפי חודש וספר</td><td>דוח כספי מפורט</td></tr>
+    </table>
+
+    <p>הקבצים נפתחים באקסל עם עברית תקינה.</p>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>טיפ:</strong> בסוף כל חודש, תוריד את קובץ ההכנסות ותשלח לרואה חשבון. חוסך ספירות ידניות.
+    </div>
+  </div>
+
+  <!-- הגדרות -->
+  <div class="section" id="settings">
+    <h2><i class="fas fa-cog"></i> הגדרות מערכת</h2>
+    <p>ההגדרות זמינות למנהל מערכת (admin) בלבד.</p>
+
+    <table>
+      <tr><th>הגדרה</th><th>מה עושה</th><th>ברירת מחדל</th></tr>
+      <tr><td><strong>שם המספרה</strong></td><td>מופיע בראש דף ההזמנה</td><td>מספרה</td></tr>
+      <tr><td><strong>טלפון</strong></td><td>מופיע בדף ההזמנה</td><td>-</td></tr>
+      <tr><td><strong>כתובת</strong></td><td>מופיעה בדף ההזמנה</td><td>-</td></tr>
+      <tr><td><strong>שעת פתיחה</strong></td><td>השעה שהיומן מתחיל</td><td>09:00</td></tr>
+      <tr><td><strong>שעת סגירה</strong></td><td>השעה שהיומן נגמר</td><td>20:00</td></tr>
+      <tr><td><strong>מרווח משבצות</strong></td><td>כל כמה דקות מתחילה משבצת</td><td>30 דקות</td></tr>
+    </table>
+
+    <div class="warning-box">
+      <i class="fas fa-exclamation-triangle"></i>
+      <strong>"מרווח משבצות" - חשוב להבין:</strong> אם הגדרת 30 דקות, הלקוחות יראו שעות כמו 09:00, 09:30, 10:00... אם תשנה ל-15, יראו 09:00, 09:15, 09:30... בחר מה מתאים לך.
+    </div>
+
+    <h3><i class="fas fa-user-tie"></i> ניהול ספרים</h3>
+    <p>בעמוד "ספרים" אפשר:</p>
+    <ul style="padding-right:1.5rem">
+      <li><strong>הוספת ספר</strong> - שם, טלפון, התמחות, שעות עבודה, צבע, וסיסמה לכניסה</li>
+      <li><strong>עריכת ספר</strong> - שינוי שעות, ימי עבודה, צבע</li>
+      <li><strong>ימי חופש</strong> - הוספת תאריכים שהספר לא עובד (חג, חופשה)</li>
+      <li><strong>הסרת ספר</strong> - מבטל את הספר (לא מוחק, רק מסתיר)</li>
+    </ul>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>ימי עבודה:</strong> בעריכת ספר יש שדה "ימי עבודה" עם מספרים: 0=ראשון, 1=שני, 2=שלישי, 3=רביעי, 4=חמישי, 5=שישי, 6=שבת. לדוגמה: "0,1,2,3,4" = ראשון עד חמישי.
+    </div>
+  </div>
+
+  <!-- שימוש מהנייד -->
+  <div class="section" id="mobile">
+    <h2><i class="fas fa-mobile-alt"></i> שימוש מהנייד</h2>
+    <p>המערכת מותאמת לנייד. בתחתית המסך יש סרגל ניווט:</p>
+
+    <table>
+      <tr><th>כפתור</th><th>מה עושה</th></tr>
+      <tr><td><i class="fas fa-home"></i> ראשי</td><td>לוח בקרה</td></tr>
+      <tr><td><i class="fas fa-calendar-alt"></i> יומן</td><td>יומן תורים</td></tr>
+      <tr><td><i class="fas fa-plus"></i> תור חדש</td><td>קביעת תור ידנית</td></tr>
+      <tr><td><i class="fas fa-clock"></i> תורים</td><td>רשימת תורים לפי תאריך</td></tr>
+      <tr><td><i class="fas fa-bars"></i> עוד</td><td>לקוחות, ספרים, שירותים, דוחות, הגדרות, יציאה</td></tr>
+    </table>
+
+    <div class="tip-box">
+      <i class="fas fa-lightbulb"></i>
+      <strong>הוספה למסך הבית:</strong>
+      <br>באייפון (ספארי): לחץ על כפתור השיתוף ↑ → "הוסף למסך הבית"
+      <br>באנדרואיד (כרום): שלוש נקודות ⋮ → "הוסף למסך הבית"
+      <br>ככה זה ייראה כמו אפליקציה אמיתית!
+    </div>
+  </div>
+
+  <!-- טיפים ליום-יום -->
+  <div class="section" id="tips">
+    <h2><i class="fas fa-magic"></i> טיפים ליום-יום - איך להפיק מקסימום</h2>
+
+    <h3>🌅 בבוקר (דקה אחת)</h3>
+    <ul style="padding-right:1.5rem">
+      <li>פתח את לוח הבקרה</li>
+      <li>ראה כמה תורים יש היום</li>
+      <li>אשר תורים ממתינים</li>
+    </ul>
+
+    <h3>✂️ אחרי כל תספורת (5 שניות)</h3>
+    <ul style="padding-right:1.5rem">
+      <li>סמן את התור כ"הושלם" → זה מעדכן הכנסות ומספר ביקורים</li>
+    </ul>
+
+    <h3>📞 פעם בשבוע (5 דקות)</h3>
+    <ul style="padding-right:1.5rem">
+      <li>בדוק "לקוחות בסיכון נטישה" בלוח הבקרה</li>
+      <li>התקשר ללקוחות שלא ביקרו 30+ יום</li>
+      <li>הציע להם לקבוע תור דרך הקישור</li>
+    </ul>
+
+    <h3>📊 בסוף החודש (10 דקות)</h3>
+    <ul style="padding-right:1.5rem">
+      <li>היכנס לדוחות → ראה סיכום הכנסות</li>
+      <li>השווה לחודש הקודם</li>
+      <li>הורד CSV אם צריך לרואה חשבון</li>
+      <li>בדוק: איזה שירות הכי רווחי? אולי כדאי לקדם אותו?</li>
+    </ul>
+
+    <h3>🔗 שיווק</h3>
+    <ul style="padding-right:1.5rem">
+      <li>שים את קישור ההזמנה <strong>בביו של אינסטגרם</strong></li>
+      <li>שלח אותו ב<strong>וואטסאפ ביזנס</strong> כתגובה מהירה</li>
+      <li>הדפס אותו כ<strong>QR קוד</strong> על כרטיס ביקור</li>
+      <li>שים אותו ב<strong>סטורי</strong> עם "הזמינו תור עכשיו!"</li>
+    </ul>
+  </div>
+
+  <!-- שאלות נפוצות -->
+  <div class="section" id="faq">
+    <h2><i class="fas fa-question-circle"></i> שאלות נפוצות</h2>
+
+    <h3>ש: לקוח הזמין תור - אני חייב לאשר?</h3>
+    <p>כן. כשלקוח מזמין, התור נכנס בסטטוס "ממתין". אתה צריך ללחוץ "אשר" כדי שהתור ייחשב סופי. אפשר גם לבטל אם השעה לא מתאימה.</p>
+
+    <h3>ש: מה קורה אם שני לקוחות מנסים להזמין אותה שעה?</h3>
+    <p>הראשון שמאשר - מקבל. השני יראה שהשעה כבר תפוסה ויצטרך לבחור שעה אחרת. <strong>אין תורים כפולים.</strong></p>
+
+    <h3>ש: אני יכול לראות את המערכת מכמה מכשירים?</h3>
+    <p>כן. אפשר להיות מחובר מהטלפון ומהמחשב במקביל. הנתונים מתעדכנים בזמן אמת.</p>
+
+    <h3>ש: לקוח לא הגיע. מה לעשות?</h3>
+    <p>תסמן את התור כ"בוטל". ככה השעה חוזרת להיות פנויה. המערכת עוקבת אחרי אחוז אי-ההגעה של כל לקוח.</p>
+
+    <h3>ש: איך מוסיפים יום חופש?</h3>
+    <p>ספרים → לחץ על "ימי חופש" ליד הספר → בחר תאריך + סיבה → "הוסף". באותו יום לא יוצגו שעות פנויות ללקוחות.</p>
+
+    <h3>ש: הלקוח צריך להתקין אפליקציה?</h3>
+    <p><strong>לא.</strong> הלקוח לוחץ על קישור → בוחר ספר, שירות, תאריך ושעה → מזין שם וטלפון → מאשר. בלי הורדה, בלי הרשמה.</p>
+
+    <h3>ש: אפשר לשנות מחיר של שירות?</h3>
+    <p>כן. שירותים → עריכה → שנה את המחיר → שמור. תורים שכבר נקבעו ישמרו על המחיר הישן. תורים חדשים יקבלו את המחיר החדש.</p>
+
+    <h3>ש: הנתונים נשמרים? מה אם האתר נופל?</h3>
+    <p>הנתונים שמורים בענן (שרת PostgreSQL). גם אם הטלפון שלך נופל, הנתונים בטוחים.</p>
+  </div>
+
+  <!-- סיכום -->
+  <div class="section" style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:2px solid #10B981">
+    <h2 style="border:none;color:#065F46"><i class="fas fa-rocket"></i> שרון, בהצלחה!</h2>
+    <p style="font-size:1.05rem">
+      יש לך 30 יום לנסות את המערכת. תשתמש, תנסה, תזמין תורים, תראה איך הלקוחות מגיבים.
+    </p>
+    <p style="margin-top:0.5rem">
+      <strong>3 דברים שחשוב לעשות עכשיו:</strong>
+    </p>
+    <ol style="padding-right:1.5rem;margin-top:0.5rem">
+      <li>תשנה את הסיסמה שלך</li>
+      <li>תעדכן את פרטי המספרה (שם, טלפון, כתובת) בהגדרות</li>
+      <li>תשלח את קישור ההזמנה ל-3 לקוחות ותראה מה קורה</li>
+    </ol>
+    <p style="margin-top:1rem;font-size:1.1rem;font-weight:600;color:#065F46">
+      שאלות? בעיות? רעיונות? - דבר איתי! 📱
+    </p>
+  </div>
+
+  <div class="footer">
+    <p>מדריך למערכת ניהול תורים | נכתב במיוחד בשבילך, שרון</p>
+    <p style="margin-top:0.25rem">גרסה 1.0 | מרץ 2026</p>
+  </div>
+
+</body>
+</html>
