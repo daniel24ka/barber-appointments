@@ -188,6 +188,21 @@ async function initDatabase() {
       value TEXT
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS consents (
+      id SERIAL PRIMARY KEY,
+      consent_type TEXT NOT NULL CHECK(consent_type IN ('booking_privacy','terms_of_use','data_processing')),
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('client','user')),
+      entity_id INTEGER,
+      entity_name TEXT,
+      entity_phone TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      consent_text TEXT NOT NULL,
+      accepted INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
   // Indexes
   const indexes = [
@@ -199,7 +214,9 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_clients_name ON clients(name)",
     "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
     "CREATE INDEX IF NOT EXISTS idx_services_active ON services(active, sort_order)",
-    "CREATE INDEX IF NOT EXISTS idx_days_off_barber_date ON days_off(barber_id, date)"
+    "CREATE INDEX IF NOT EXISTS idx_days_off_barber_date ON days_off(barber_id, date)",
+    "CREATE INDEX IF NOT EXISTS idx_consents_type ON consents(consent_type, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_consents_entity ON consents(entity_type, entity_id)"
   ];
   for (const idx of indexes) {
     try { await pool.query(idx); } catch(e) {}

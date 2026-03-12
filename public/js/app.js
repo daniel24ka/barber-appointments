@@ -96,7 +96,85 @@ async function showApp() {
     if (settings.shop_name) document.getElementById('shopName').textContent = settings.shop_name;
   } catch(e) { console.error(e); }
 
+  // Check if user accepted terms of use
+  try {
+    const consent = await api('/consents/check');
+    if (!consent.accepted) {
+      showTermsAgreement();
+      return;
+    }
+  } catch(e) { /* if check fails, proceed normally */ }
+
   navigate('dashboard');
+}
+
+function showTermsAgreement() {
+  const area = document.getElementById('contentArea');
+  area.innerHTML = `
+    <div style="max-width:650px;margin:2rem auto">
+      <div class="card" style="border:2px solid var(--primary)">
+        <div style="text-align:center;margin-bottom:1.5rem">
+          <i class="fas fa-shield-alt" style="font-size:3rem;color:var(--primary)"></i>
+          <h2 style="font-size:1.4rem;font-weight:700;margin-top:0.5rem">תנאי שימוש והסכמה לעיבוד מידע</h2>
+          <p style="color:var(--text-secondary)">לפני השימוש הראשון במערכת, נא לקרוא ולאשר</p>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:1.25rem;max-height:350px;overflow-y:auto;font-size:0.9rem;line-height:1.8;margin-bottom:1.25rem;border:1px solid var(--border)">
+          <h3 style="color:var(--primary-dark);margin-bottom:0.5rem">1. אחריות על המידע</h3>
+          <p>כמשתמש מורשה במערכת, אני מתחייב/ת לשמור על סודיות המידע האישי של הלקוחות הנשמר במערכת, ולא להעבירו לצדדים שלישיים שלא לצורך.</p>
+
+          <h3 style="color:var(--primary-dark);margin:1rem 0 0.5rem">2. שימוש ראוי</h3>
+          <p>אני מתחייב/ת להשתמש במערכת אך ורק למטרות ניהול תורים ולקוחות של בית העסק, בהתאם לחוק הגנת הפרטיות, התשמ"א-1981.</p>
+
+          <h3 style="color:var(--primary-dark);margin:1rem 0 0.5rem">3. אבטחת מידע</h3>
+          <p>אני מתחייב/ת לשמור על סיסמה חזקה, לא לשתף את פרטי הגישה שלי, ולדווח מיידית על כל חשד לפריצה או שימוש לא מורשה.</p>
+
+          <h3 style="color:var(--primary-dark);margin:1rem 0 0.5rem">4. מחיקת מידע</h3>
+          <p>אני מבין/ה שלקוח רשאי לבקש מחיקת המידע שלו בכל עת, ואני מתחייב/ת לכבד בקשות כאלה ולפעול בהתאם.</p>
+
+          <h3 style="color:var(--primary-dark);margin:1rem 0 0.5rem">5. תיעוד</h3>
+          <p>אני מבין/ה שכל פעולה במערכת מתועדת, וכי הסכמה זו נשמרת עם חותמת זמן וכתובת IP לצורך הוכחת ציות לחוק.</p>
+        </div>
+
+        <label style="display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;margin-bottom:1rem;font-size:0.95rem">
+          <input type="checkbox" id="termsAccept" style="margin-top:0.3rem;width:20px;height:20px;flex-shrink:0">
+          <span>קראתי את תנאי השימוש ואני מסכים/ה לפעול בהתאם להם ובהתאם ל<a href="/privacy.html" target="_blank" style="color:var(--primary);font-weight:600;text-decoration:underline">מדיניות הפרטיות</a>.</span>
+        </label>
+
+        <button class="btn btn-primary btn-block" id="termsSubmitBtn" onclick="acceptTerms()" disabled>
+          <i class="fas fa-check-circle"></i> אני מאשר/ת ומסכים/ה
+        </button>
+        <p id="termsError" style="color:var(--danger);text-align:center;margin-top:0.5rem;display:none"></p>
+      </div>
+    </div>
+  `;
+  document.getElementById('termsAccept').addEventListener('change', function() {
+    document.getElementById('termsSubmitBtn').disabled = !this.checked;
+  });
+}
+
+async function acceptTerms() {
+  const cb = document.getElementById('termsAccept');
+  if (!cb.checked) return;
+  const btn = document.getElementById('termsSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> שומר...';
+
+  try {
+    await api('/consents/terms', {
+      method: 'POST',
+      body: JSON.stringify({
+        consent_text: 'קראתי את תנאי השימוש ואני מסכים/ה לפעול בהתאם להם ובהתאם למדיניות הפרטיות. אני מתחייב/ת לשמור על סודיות המידע, להשתמש במערכת למטרות מורשות בלבד, ולפעול בהתאם לחוק הגנת הפרטיות.'
+      })
+    });
+    toast('ההסכמה נשמרה בהצלחה');
+    navigate('dashboard');
+  } catch(e) {
+    const errEl = document.getElementById('termsError');
+    errEl.textContent = e.message || 'שגיאה בשמירת ההסכמה';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> אני מאשר/ת ומסכים/ה';
+  }
 }
 
 // === Navigation ===
@@ -1422,6 +1500,24 @@ async function renderSettings() {
       `;
     }
 
+    // Consent log - admin only
+    let consentHtml = '';
+    if (isAdmin) {
+      consentHtml = `
+        <div class="card" style="margin-top:1rem">
+          <div class="card-header">
+            <h3><i class="fas fa-shield-alt"></i> יומן הסכמות פרטיות</h3>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline filter-active" onclick="loadConsentLog('')" id="cfAll">הכל</button>
+              <button class="btn btn-sm btn-outline" onclick="loadConsentLog('booking_privacy')" id="cfBooking">הזמנות</button>
+              <button class="btn btn-sm btn-outline" onclick="loadConsentLog('terms_of_use')" id="cfTerms">תנאי שימוש</button>
+            </div>
+          </div>
+          <div id="consentLogContainer"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div></div>
+        </div>
+      `;
+    }
+
     // Password change - available to all users
     area.innerHTML = `
       ${settingsHtml}
@@ -1432,7 +1528,9 @@ async function renderSettings() {
         <div class="form-group"><label>אימות סיסמה חדשה</label><input type="password" id="cpConfirm" minlength="6"></div>
         <button class="btn btn-primary" onclick="changePassword()"><i class="fas fa-save"></i> שנה סיסמה</button>
       </div>
+      ${consentHtml}
     `;
+    if (isAdmin) loadConsentLog('');
   } catch(e) { toast(e.message, 'error'); }
 }
 
@@ -1469,8 +1567,112 @@ async function saveSettings() {
   } catch(e) { toast(e.message, 'error'); }
 }
 
+// === Consent Log ===
+async function loadConsentLog(type) {
+  const container = document.getElementById('consentLogContainer');
+  if (!container) return;
+  container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  // Update filter buttons
+  document.querySelectorAll('[id^="cf"]').forEach(b => b.classList.remove('filter-active'));
+  if (type === 'booking_privacy') document.getElementById('cfBooking').classList.add('filter-active');
+  else if (type === 'terms_of_use') document.getElementById('cfTerms').classList.add('filter-active');
+  else document.getElementById('cfAll').classList.add('filter-active');
+
+  try {
+    const query = type ? `?type=${type}` : '';
+    const data = await api(`/consents/log${query}`);
+
+    const TYPE_HE = { booking_privacy: 'הסכמת הזמנה', terms_of_use: 'תנאי שימוש', data_processing: 'עיבוד מידע' };
+
+    if (!data.consents.length) {
+      container.innerHTML = '<div class="empty-state" style="padding:1.5rem"><i class="fas fa-clipboard-check"></i><h3>אין רשומות הסכמה</h3></div>';
+      return;
+    }
+
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      container.innerHTML = `<div class="cards-list">${data.consents.map(c => `
+        <div class="info-card">
+          <div class="info-card-header">
+            <span class="badge badge-${c.consent_type === 'terms_of_use' ? 'confirmed' : 'completed'}">${escHtml(TYPE_HE[c.consent_type] || c.consent_type)}</span>
+            <small style="color:var(--text-light)">${new Date(c.created_at).toLocaleString('he-IL')}</small>
+          </div>
+          <div class="info-card-body">
+            <div class="info-card-row"><span class="info-label">שם:</span> ${escHtml(c.entity_name || '-')}</div>
+            ${c.entity_phone ? `<div class="info-card-row"><span class="info-label">טלפון:</span> ${escHtml(c.entity_phone)}</div>` : ''}
+            <div class="info-card-row"><span class="info-label">סוג:</span> ${c.entity_type === 'user' ? 'משתמש מערכת' : 'לקוח'}</div>
+            <div class="info-card-row"><span class="info-label">IP:</span> ${escHtml(c.ip_address || '-')}</div>
+          </div>
+        </div>
+      `).join('')}</div>
+      <div style="text-align:center;padding:0.5rem;color:var(--text-secondary);font-size:0.85rem">
+        סה"כ ${data.total} רשומות
+      </div>`;
+    } else {
+      container.innerHTML = `
+        <div class="table-container"><table>
+          <thead><tr><th>תאריך</th><th>סוג</th><th>שם</th><th>טלפון</th><th>גורם</th><th>IP</th></tr></thead>
+          <tbody>${data.consents.map(c => `
+            <tr>
+              <td>${new Date(c.created_at).toLocaleString('he-IL')}</td>
+              <td><span class="badge badge-${c.consent_type === 'terms_of_use' ? 'confirmed' : 'completed'}">${escHtml(TYPE_HE[c.consent_type] || c.consent_type)}</span></td>
+              <td>${escHtml(c.entity_name || '-')}</td>
+              <td>${escHtml(c.entity_phone || '-')}</td>
+              <td>${c.entity_type === 'user' ? 'משתמש' : 'לקוח'}</td>
+              <td style="font-size:.8rem;direction:ltr">${escHtml(c.ip_address || '-')}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table></div>
+        <div style="text-align:center;padding:0.5rem;color:var(--text-secondary);font-size:0.85rem">
+          סה"כ ${data.total} רשומות (עמוד ${data.page} מתוך ${data.pages})
+        </div>
+      `;
+    }
+  } catch(e) { container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>${escHtml(e.message)}</h3></div>`; }
+}
+
+// === Accessibility ===
+let a11yFontLevel = parseInt(localStorage.getItem('a11y_font') || '0');
+
+function a11yFontSize(dir) {
+  if (dir === 0) { a11yFontLevel = 0; }
+  else { a11yFontLevel = Math.max(-2, Math.min(4, a11yFontLevel + dir)); }
+  document.documentElement.style.fontSize = (15 + a11yFontLevel * 2) + 'px';
+  localStorage.setItem('a11y_font', a11yFontLevel);
+}
+
+function a11yContrast() {
+  document.body.classList.toggle('high-contrast');
+  localStorage.setItem('a11y_contrast', document.body.classList.contains('high-contrast') ? '1' : '0');
+}
+
+function a11yLinks() {
+  document.body.classList.toggle('highlight-links');
+  localStorage.setItem('a11y_links', document.body.classList.contains('highlight-links') ? '1' : '0');
+}
+
+function initA11y() {
+  // Restore saved preferences
+  if (a11yFontLevel !== 0) document.documentElement.style.fontSize = (15 + a11yFontLevel * 2) + 'px';
+  if (localStorage.getItem('a11y_contrast') === '1') document.body.classList.add('high-contrast');
+  if (localStorage.getItem('a11y_links') === '1') document.body.classList.add('highlight-links');
+
+  // Toggle panel
+  const toggle = document.getElementById('a11yToggle');
+  const panel = document.getElementById('a11yPanel');
+  if (toggle && panel) {
+    toggle.addEventListener('click', () => panel.classList.toggle('hidden'));
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.a11y-widget')) panel.classList.add('hidden');
+    });
+  }
+}
+
 // === Init ===
 document.addEventListener('DOMContentLoaded', () => {
+  initA11y();
+
   // Login form
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1537,6 +1739,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('moreLogoutBtn').addEventListener('click', function() {
     closeMoreMenu();
     logout();
+  });
+
+  // Keyboard: Escape closes modal / more menu
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('modalOverlay');
+      if (modal && !modal.classList.contains('hidden')) { closeModal(); return; }
+      const moreMenu = document.getElementById('moreMenu');
+      if (moreMenu && !moreMenu.classList.contains('hidden')) {
+        moreMenu.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    }
   });
 
   // Auto-login if token exists

@@ -37,6 +37,7 @@ app.use('/api/services', require('./routes/v1/services'));
 app.use('/api/dashboard', require('./routes/v1/dashboard'));
 app.use('/api/settings', require('./routes/v1/settings'));
 app.use('/api/export', require('./routes/v1/export'));
+app.use('/api/consents', require('./routes/v1/consents'));
 
 // SPA fallback
 app.get('*', (req, res) => {

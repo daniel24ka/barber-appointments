@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הצהרת נגישות</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Heebo', sans-serif; background: #F1F5F9; color: #1E293B; line-height: 1.8; direction: rtl; }
+    .header {
+      background: linear-gradient(135deg, #3730A3 0%, #4F46E5 50%, #818CF8 100%);
+      color: white; text-align: center; padding: 2.5rem 1rem;
+    }
+    .header h1 { font-size: 1.8rem; font-weight: 700; }
+    .header p { opacity: 0.9; margin-top: 0.25rem; }
+    .container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    .card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 1.5rem; }
+    h2 { color: #4F46E5; font-size: 1.2rem; margin-bottom: 0.75rem; border-bottom: 2px solid #E2E8F0; padding-bottom: 0.5rem; }
+    p, li { font-size: 0.95rem; color: #334155; margin-bottom: 0.5rem; }
+    ul { padding-right: 1.5rem; margin-bottom: 1rem; }
+    .highlight { background: #EEF2FF; border-right: 4px solid #4F46E5; padding: 1rem; border-radius: 0 8px 8px 0; margin: 1rem 0; }
+    .footer { text-align: center; padding: 1.5rem; color: #94A3B8; font-size: 0.85rem; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: #4F46E5; color: white; border: none; border-radius: 8px;
+      padding: 0.6rem 1.2rem; font-family: 'Heebo', sans-serif; font-size: 0.9rem;
+      font-weight: 600; cursor: pointer; text-decoration: none; margin-top: 1rem;
+    }
+    .back-btn:hover { background: #3730A3; }
+    *:focus-visible { outline: 3px solid #4F46E5; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <a href="#main" style="position:absolute;top:-100px;right:0;z-index:9999;background:#4F46E5;color:#fff;padding:0.75rem 1.5rem;font-weight:600" onfocus="this.style.top='0'" onblur="this.style.top='-100px'">דלג לתוכן</a>
+
+  <div class="header">
+    <h1>הצהרת נגישות</h1>
+    <p>מערכת ניהול תורים למספרה</p>
+  </div>
+
+  <div class="container" id="main">
+    <div class="card">
+      <h2>מחויבות לנגישות</h2>
+      <p>אנו מחויבים להנגשת המערכת לכלל האוכלוסייה, לרבות אנשים עם מוגבלויות, בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ"ח-1998, ותקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג-2013.</p>
+      <p>המערכת תוכננה ופותחה בהתאם להנחיות תקן ישראלי 5568 (המבוסס על הנחיות WCAG 2.0 ברמה AA).</p>
+    </div>
+
+    <div class="card">
+      <h2>התאמות הנגישות שבוצעו</h2>
+      <ul>
+        <li><strong>ניווט מקלדת:</strong> ניתן לנווט בכל המערכת באמצעות מקלדת בלבד (Tab, Shift+Tab, Enter, Escape)</li>
+        <li><strong>קישור דילוג:</strong> קישור "דלג לתוכן הראשי" מופיע בתחילת כל עמוד</li>
+        <li><strong>תוויות ARIA:</strong> כל האלמנטים האינטראקטיביים מסומנים עם תוויות נגישות מתאימות</li>
+        <li><strong>ניגודיות צבעים:</strong> המערכת עומדת ביחס ניגודיות מינימלי של 4.5:1 לטקסט רגיל</li>
+        <li><strong>הגדלת גופן:</strong> אפשרות להגדלת הגופן עד 130% ללא אובדן תוכן</li>
+        <li><strong>מצב ניגודיות גבוהה:</strong> אפשרות למעבר לצבעי ניגודיות גבוהה</li>
+        <li><strong>הדגשת קישורים:</strong> אפשרות להדגשת כל הקישורים והכפתורים</li>
+        <li><strong>תגובתיות:</strong> המערכת מותאמת לכל גדלי המסך (מחשב, טאבלט, טלפון)</li>
+        <li><strong>שפה:</strong> כל העמודים מסומנים בשפה העברית (lang="he")</li>
+        <li><strong>כיווניות:</strong> תמיכה מלאה בכיוון RTL (ימין לשמאל)</li>
+        <li><strong>טפסים:</strong> כל שדות הטפסים מלווים בתוויות מתאימות (label)</li>
+        <li><strong>הודעות שגיאה:</strong> הודעות שגיאה מוקראות אוטומטית לקורא מסך (aria-live)</li>
+        <li><strong>חלונות מודאליים:</strong> מסומנים כ-dialog עם aria-modal ומנוהלים בהתאם</li>
+        <li><strong>אייקונים דקורטיביים:</strong> מסומנים כ-aria-hidden כדי שלא יפריעו לקוראי מסך</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>כלי נגישות מובנה</h2>
+      <p>המערכת כוללת כלי נגישות מובנה (כפתור הנגישות בפינת המסך) המאפשר:</p>
+      <ul>
+        <li>הגדלת והקטנת גופן</li>
+        <li>מעבר למצב ניגודיות גבוהה</li>
+        <li>הדגשת קישורים וכפתורים</li>
+      </ul>
+      <p>ההעדפות נשמרות באופן מקומי במכשיר שלך ונטענות אוטומטית בכל כניסה.</p>
+    </div>
+
+    <div class="card">
+      <h2>דפדפנים וטכנולוגיות מסייעות</h2>
+      <p>המערכת נבדקה ותומכת בדפדפנים הנפוצים:</p>
+      <ul>
+        <li>Google Chrome (גרסה אחרונה)</li>
+        <li>Mozilla Firefox (גרסה אחרונה)</li>
+        <li>Microsoft Edge (גרסה אחרונה)</li>
+        <li>Safari (גרסה אחרונה)</li>
+      </ul>
+      <p>המערכת תואמת לשימוש עם קוראי מסך כגון NVDA, JAWS ו-VoiceOver.</p>
+    </div>
+
+    <div class="card">
+      <h2>פנייה בנושא נגישות</h2>
+      <p>אם נתקלת בבעיית נגישות או שיש לך הצעות לשיפור, אנא פנה אלינו:</p>
+      <div class="highlight">
+        <p>ניתן לפנות ישירות לבית העסק בטלפון או באימייל המופיעים באתר.</p>
+        <p>אנו מתחייבים לטפל בכל פנייה בנושא נגישות תוך 14 ימי עסקים.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>תאריך עדכון</h2>
+      <p>הצהרת נגישות זו עודכנה לאחרונה: מרץ 2026</p>
+    </div>
+
+    <div class="footer">
+      <p>מערכת נוצרה על ידי <strong>דניאל כספין - דניטק</strong></p>
+      <a href="/book" class="back-btn">חזרה לעמוד הזמנת תור</a>
+    </div>
+  </div>
+</body>
+</html>

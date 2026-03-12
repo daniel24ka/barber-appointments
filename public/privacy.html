@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מדיניות פרטיות</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Heebo', sans-serif; background: #F1F5F9; color: #1E293B; line-height: 1.8; direction: rtl; }
+    .header {
+      background: linear-gradient(135deg, #3730A3 0%, #4F46E5 50%, #818CF8 100%);
+      color: white; text-align: center; padding: 2.5rem 1rem;
+    }
+    .header h1 { font-size: 1.8rem; font-weight: 700; }
+    .header p { opacity: 0.9; margin-top: 0.25rem; }
+    .container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    .card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 1.5rem; }
+    h2 { color: #4F46E5; font-size: 1.2rem; margin-bottom: 0.75rem; border-bottom: 2px solid #E2E8F0; padding-bottom: 0.5rem; }
+    h3 { color: #3730A3; font-size: 1rem; margin: 1rem 0 0.5rem; }
+    p, li { font-size: 0.95rem; color: #334155; margin-bottom: 0.5rem; }
+    ul { padding-right: 1.5rem; margin-bottom: 1rem; }
+    .highlight { background: #EEF2FF; border-right: 4px solid #4F46E5; padding: 1rem; border-radius: 0 8px 8px 0; margin: 1rem 0; }
+    .footer { text-align: center; padding: 1.5rem; color: #94A3B8; font-size: 0.85rem; }
+    .footer a { color: #4F46E5; text-decoration: none; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: #4F46E5; color: white; border: none; border-radius: 8px;
+      padding: 0.6rem 1.2rem; font-family: 'Heebo', sans-serif; font-size: 0.9rem;
+      font-weight: 600; cursor: pointer; text-decoration: none; margin-top: 1rem;
+    }
+    .back-btn:hover { background: #3730A3; }
+    @media print { .back-btn { display: none; } body { background: white; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>מדיניות פרטיות</h1>
+    <p>מערכת ניהול תורים למספרה</p>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h2>1. כללי</h2>
+      <p>מערכת ניהול התורים ("המערכת") מופעלת לצורך ניהול תורים, לקוחות ושירותים עבור בית העסק. מדיניות פרטיות זו מפרטת כיצד אנו אוספים, משתמשים ומגנים על המידע האישי שלך, בהתאם לחוק הגנת הפרטיות, התשמ"א-1981, ותקנות הגנת הפרטיות (אבטחת מידע), התשע"ז-2017.</p>
+    </div>
+
+    <div class="card">
+      <h2>2. המידע שאנו אוספים</h2>
+      <p>במסגרת השימוש במערכת, אנו עשויים לאסוף את המידע הבא:</p>
+      <ul>
+        <li><strong>פרטים אישיים:</strong> שם מלא, מספר טלפון, כתובת דוא"ל</li>
+        <li><strong>נתוני תורים:</strong> תאריכים, שעות, שירותים שנבחרו, ספר מטפל</li>
+        <li><strong>היסטוריית ביקורים:</strong> מספר ביקורים, תאריך ביקור אחרון</li>
+        <li><strong>נתונים טכניים:</strong> כתובת IP, סוג דפדפן (לצורכי אבטחה בלבד)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>3. מטרות השימוש במידע</h2>
+      <p>המידע שנאסף משמש אך ורק למטרות הבאות:</p>
+      <ul>
+        <li>ניהול וקביעת תורים</li>
+        <li>יצירת קשר עם הלקוח בנוגע לתור שנקבע</li>
+        <li>שיפור השירות וניתוח סטטיסטי פנימי</li>
+        <li>תפעול שוטף של בית העסק</li>
+      </ul>
+      <div class="highlight">
+        <strong>אנו לא נעביר, נמכור או נשתף את המידע האישי שלך עם צדדים שלישיים</strong>, אלא אם נדרש לכך על פי חוק.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. אבטחת המידע</h2>
+      <p>אנו נוקטים אמצעי אבטחה סבירים להגנה על המידע האישי:</p>
+      <ul>
+        <li>הצפנת סיסמאות (bcrypt)</li>
+        <li>תקשורת מוצפנת (HTTPS/SSL)</li>
+        <li>הגבלת גישה למורשים בלבד (אימות JWT)</li>
+        <li>הגבלת קצב בקשות למניעת שימוש לרעה</li>
+        <li>גיבוי נתונים באופן סדיר</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>5. שמירת המידע</h2>
+      <p>המידע האישי יישמר כל עוד הוא נחוץ למטרות המפורטות לעיל. לקוח רשאי לבקש את מחיקת המידע שלו בכל עת, בכפוף למגבלות חוקיות (כגון חובת שמירת רשומות לצורכי מס).</p>
+    </div>
+
+    <div class="card">
+      <h2>6. זכויות הלקוח</h2>
+      <p>בהתאם לחוק הגנת הפרטיות, עומדות לך הזכויות הבאות:</p>
+      <ul>
+        <li><strong>זכות עיון:</strong> לעיין במידע האישי המוחזק אודותיך</li>
+        <li><strong>זכות תיקון:</strong> לבקש תיקון מידע שגוי או לא מעודכן</li>
+        <li><strong>זכות מחיקה:</strong> לבקש מחיקת המידע שלך מהמערכת</li>
+        <li><strong>זכות התנגדות:</strong> להתנגד לשימוש במידע לצורך שיווק ישיר</li>
+      </ul>
+      <p>לממוש כל אחת מהזכויות האלו, ניתן לפנות לבית העסק ישירות.</p>
+    </div>
+
+    <div class="card">
+      <h2>7. רישום מאגרי מידע</h2>
+      <p>בית העסק מתחייב לנהל את מאגר המידע בהתאם לדרישות החוק, לרבות רישום מאגר מידע ברשם מאגרי המידע ככל שנדרש על פי חוק.</p>
+    </div>
+
+    <div class="card">
+      <h2>8. הסכמה ושינויים</h2>
+      <p>השימוש במערכת מהווה הסכמה למדיניות פרטיות זו. כל הסכמה מתועדת ונשמרת עם חותמת זמן, כתובת IP ופרטי המסכים, לצורך הוכחת ציות לחוק.</p>
+      <p>אנו שומרים את הזכות לעדכן מדיניות זו מעת לעת. שינויים מהותיים יובאו לידיעת המשתמשים.</p>
+    </div>
+
+    <div class="card">
+      <h2>9. יצירת קשר</h2>
+      <p>לשאלות או בקשות בנוגע למדיניות הפרטיות או למידע האישי שלך, ניתן לפנות לבית העסק בטלפון או באימייל המופיעים באתר.</p>
+    </div>
+
+    <div class="footer">
+      <p>עודכן לאחרונה: מרץ 2026</p>
+      <p>מערכת נוצרה על ידי <strong>דניאל כספין - דניטק</strong></p>
+      <a href="/book" class="back-btn">חזרה לעמוד הזמנת תור</a>
+    </div>
+  </div>
+</body>
+</html>

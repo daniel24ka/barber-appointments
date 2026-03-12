@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#4F46E5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>הזמנת תור</title>
@@ -175,18 +175,52 @@
       .slots-grid { grid-template-columns: repeat(3, 1fr); }
       .booking-header h1 { font-size: 1.4rem; }
     }
+
+    /* Accessibility */
+    .skip-link { position: absolute; top: -100px; right: 0; z-index: 9999; background: var(--primary); color: white; padding: 0.75rem 1.5rem; font-weight: 600; transition: top .2s; text-decoration: none; }
+    .skip-link:focus { top: 0; }
+    *:focus-visible { outline: 3px solid var(--primary) !important; outline-offset: 2px !important; }
+    body.high-contrast { --bg: #000; --bg-card: #1a1a1a; --text: #fff; --text-secondary: #e0e0e0; --border: #555; }
+    body.high-contrast input { background: #222 !important; color: #fff !important; border-color: #666 !important; }
+    body.high-contrast .booking-header { background: #111; }
+    body.highlight-links a { outline: 2px solid var(--primary) !important; text-decoration: underline !important; }
+    body.highlight-links button { outline: 2px dashed #F59E0B !important; }
+
+    .a11y-widget { position: fixed; bottom: 1rem; left: 1rem; z-index: 1500; }
+    .a11y-toggle {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--primary); color: white; border: 2px solid white;
+      font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,.2); cursor: pointer;
+    }
+    .a11y-toggle:hover { background: var(--primary-dark); }
+    .a11y-panel {
+      position: absolute; bottom: 52px; left: 0;
+      background: white; border-radius: var(--radius); padding: 1rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,.1); min-width: 200px; border: 1px solid var(--border);
+    }
+    .a11y-panel.hidden { display: none; }
+    .a11y-panel h4 { font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    .a11y-panel button {
+      display: flex; align-items: center; gap: 0.5rem; width: 100%;
+      padding: 0.5rem 0.75rem; border: none; background: none;
+      font-family: var(--font); font-size: 0.88rem; font-weight: 500;
+      color: var(--text); border-radius: 8px; cursor: pointer;
+    }
+    .a11y-panel button:hover { background: var(--bg); color: var(--primary); }
   </style>
 </head>
 <body>
+  <a href="#bookingContent" class="skip-link">דלג לתוכן</a>
 
-  <div class="booking-header">
+  <header class="booking-header" role="banner">
     <div class="logo"><i class="fas fa-cut"></i></div>
     <h1 id="shopTitle">הזמנת תור</h1>
     <p>בחרו ספר, תאריך ושעה - וזהו!</p>
     <div class="shop-details" id="shopDetails"></div>
-  </div>
+  </header>
 
-  <div class="container">
+  <div class="container" id="bookingContent" role="main">
     <div class="step-indicators">
       <div class="step-dot active" id="dot1">1</div>
       <div class="step-line" id="line1"></div>
@@ -216,9 +250,9 @@
       <div class="card">
         <h2><i class="fas fa-calendar-alt"></i> בחירת תאריך ושעה</h2>
         <div class="date-picker">
-          <button class="date-nav" onclick="changeDate(-1)"><i class="fas fa-chevron-right"></i></button>
-          <input type="date" id="dateInput">
-          <button class="date-nav" onclick="changeDate(1)"><i class="fas fa-chevron-left"></i></button>
+          <button class="date-nav" onclick="changeDate(-1)" aria-label="יום קודם"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+          <input type="date" id="dateInput" aria-label="בחירת תאריך">
+          <button class="date-nav" onclick="changeDate(1)" aria-label="יום הבא"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
         </div>
         <div class="date-label" id="dateLabel"></div>
         <div id="slotsContainer">
@@ -242,12 +276,12 @@
       <div class="card">
         <h2><i class="fas fa-user"></i> פרטים אישיים</h2>
         <div class="form-group">
-          <label>טלפון</label>
-          <input type="tel" id="clientPhone" placeholder="050-1234567" required dir="ltr" oninput="onPhoneInput(this.value)">
+          <label for="clientPhone">טלפון</label>
+          <input type="tel" id="clientPhone" placeholder="050-1234567" required dir="ltr" oninput="onPhoneInput(this.value)" autocomplete="tel">
         </div>
         <div class="form-group">
-          <label>שם מלא</label>
-          <input type="text" id="clientName" placeholder="הזן את שמך" required>
+          <label for="clientName">שם מלא</label>
+          <input type="text" id="clientName" placeholder="הזן את שמך" required autocomplete="name">
         </div>
       </div>
 
@@ -256,7 +290,14 @@
         <div id="bookingSummary"></div>
       </div>
 
-      <div class="error-msg" id="bookingError"></div>
+      <div class="card" style="border:2px solid #E2E8F0">
+        <label style="display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;font-size:0.9rem;color:#334155">
+          <input type="checkbox" id="privacyConsent" style="margin-top:0.3rem;width:18px;height:18px;flex-shrink:0">
+          <span>אני מאשר/ת כי קראתי את <a href="/privacy.html" target="_blank" style="color:#4F46E5;font-weight:600;text-decoration:underline">מדיניות הפרטיות</a> ומסכים/ה לאיסוף ושמירת הפרטים שלי לצורך ניהול תורים ויצירת קשר בנוגע לתור שנקבע.</span>
+        </label>
+      </div>
+
+      <div class="error-msg" id="bookingError" role="alert" aria-live="assertive"></div>
 
       <button class="btn btn-primary" id="confirmBtn" onclick="confirmBooking()">
         <i class="fas fa-calendar-check"></i> אישור הזמנה
@@ -275,6 +316,10 @@
           <button class="btn btn-primary" onclick="resetBooking()"><i class="fas fa-plus"></i> הזמנת תור נוסף</button>
         </div>
       </div>
+    </div>
+
+    <div style="text-align:center;padding:1.5rem 0 0;color:#94A3B8;font-size:0.8rem">
+      <p>נוצר על ידי <strong style="color:#64748B">דניאל כספין - דניטק</strong></p>
     </div>
   </div>
 
@@ -472,9 +517,23 @@ async function confirmBooking() {
   if (!name) { showError('נא להזין שם'); return; }
   if (!phone) { showError('נא להזין טלפון'); return; }
   if (phone.replace(/[-\s]/g, '').length < 9) { showError('מספר טלפון קצר מדי'); return; }
+  if (!document.getElementById('privacyConsent').checked) { showError('נא לאשר את מדיניות הפרטיות'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> שולח...';
+
+  // Log privacy consent
+  try {
+    await fetch('/api/consents/booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_name: name,
+        client_phone: phone,
+        consent_text: 'אני מאשר/ת כי קראתי את מדיניות הפרטיות ומסכים/ה לאיסוף ושמירת הפרטים שלי לצורך ניהול תורים ויצירת קשר בנוגע לתור שנקבע.'
+      })
+    });
+  } catch(e) { /* consent log failure should not block booking */ }
 
   try {
     const res = await fetch('/api/booking/book', {
@@ -607,6 +666,27 @@ function rebookLast() {
 
 function escH(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
+// === Accessibility ===
+let a11yFont = parseInt(localStorage.getItem('a11y_font') || '0');
+(function initBookA11y() {
+  if (a11yFont !== 0) document.documentElement.style.fontSize = (15 + a11yFont * 2) + 'px';
+  if (localStorage.getItem('a11y_contrast') === '1') document.body.classList.add('high-contrast');
+  if (localStorage.getItem('a11y_links') === '1') document.body.classList.add('highlight-links');
+})();
+function a11yFontSize(dir) {
+  if (dir === 0) a11yFont = 0; else a11yFont = Math.max(-2, Math.min(4, a11yFont + dir));
+  document.documentElement.style.fontSize = (15 + a11yFont * 2) + 'px';
+  localStorage.setItem('a11y_font', a11yFont);
+}
+function a11yContrast() {
+  document.body.classList.toggle('high-contrast');
+  localStorage.setItem('a11y_contrast', document.body.classList.contains('high-contrast') ? '1' : '0');
+}
+function a11yLinks() {
+  document.body.classList.toggle('highlight-links');
+  localStorage.setItem('a11y_links', document.body.classList.contains('highlight-links') ? '1' : '0');
+}
+
 function resetBooking() {
   state.selectedBarber = null;
   state.selectedService = null;
@@ -621,12 +701,39 @@ function resetBooking() {
   btn.disabled = false;
   btn.innerHTML = '<i class="fas fa-calendar-check"></i> אישור הזמנה';
   document.getElementById('bookingError').style.display = 'none';
+  document.getElementById('privacyConsent').checked = false;
   hideWelcomeBanner();
   // Reset date to today
   const dateInput = document.getElementById('dateInput');
   dateInput.value = formatDateISO(new Date());
   goToStep(1);
 }
+
+// Toggle a11y panel
+document.addEventListener('DOMContentLoaded', () => {
+  const toggle = document.getElementById('a11yToggleBook');
+  const panel = document.getElementById('a11yPanelBook');
+  if (toggle && panel) {
+    toggle.addEventListener('click', () => panel.classList.toggle('hidden'));
+    document.addEventListener('click', (e) => { if (!e.target.closest('.a11y-widget')) panel.classList.add('hidden'); });
+  }
+});
 </script>
+
+<!-- Accessibility Widget -->
+<div class="a11y-widget">
+  <button class="a11y-toggle" id="a11yToggleBook" aria-label="תפריט נגישות" title="נגישות">
+    <i class="fas fa-universal-access" aria-hidden="true"></i>
+  </button>
+  <div class="a11y-panel hidden" id="a11yPanelBook" role="region" aria-label="אפשרויות נגישות">
+    <h4>נגישות</h4>
+    <button onclick="a11yFontSize(1)" aria-label="הגדל גופן"><i class="fas fa-plus" aria-hidden="true"></i> הגדל גופן</button>
+    <button onclick="a11yFontSize(-1)" aria-label="הקטן גופן"><i class="fas fa-minus" aria-hidden="true"></i> הקטן גופן</button>
+    <button onclick="a11yFontSize(0)" aria-label="אפס גודל גופן"><i class="fas fa-undo" aria-hidden="true"></i> גופן רגיל</button>
+    <button onclick="a11yContrast()" aria-label="החלף ניגודיות"><i class="fas fa-adjust" aria-hidden="true"></i> ניגודיות גבוהה</button>
+    <button onclick="a11yLinks()" aria-label="הדגש קישורים"><i class="fas fa-link" aria-hidden="true"></i> הדגש קישורים</button>
+    <a href="/accessibility.html" style="display:block;text-align:center;margin-top:0.5rem;color:var(--primary);font-size:0.85rem">הצהרת נגישות</a>
+  </div>
+</div>
 </body>
 </html>

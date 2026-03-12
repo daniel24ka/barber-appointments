@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#4F46E5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,31 +12,34 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+  <!-- Skip Navigation -->
+  <a href="#contentArea" class="skip-link">דלג לתוכן הראשי</a>
 
   <!-- Login Page -->
-  <div id="loginPage" class="login-page">
+  <div id="loginPage" class="login-page" role="main" aria-label="עמוד התחברות">
     <div class="login-card">
-      <div class="login-logo">
+      <div class="login-logo" aria-hidden="true">
         <i class="fas fa-cut"></i>
       </div>
       <h1>מערכת ניהול תורים</h1>
       <p class="login-subtitle">היכנס למערכת</p>
       <form id="loginForm">
         <div class="form-group">
-          <label><i class="fas fa-user"></i> שם משתמש</label>
+          <label for="loginUsername"><i class="fas fa-user" aria-hidden="true"></i> שם משתמש</label>
           <input type="text" id="loginUsername" placeholder="הזן שם משתמש" required autocomplete="username">
         </div>
         <div class="form-group">
-          <label><i class="fas fa-lock"></i> סיסמה</label>
+          <label for="loginPassword"><i class="fas fa-lock" aria-hidden="true"></i> סיסמה</label>
           <input type="password" id="loginPassword" placeholder="הזן סיסמה" required autocomplete="current-password">
         </div>
         <button type="submit" class="btn btn-primary btn-block">
           <i class="fas fa-sign-in-alt"></i> התחבר
         </button>
-        <div id="loginError" class="error-msg hidden"></div>
+        <div id="loginError" class="error-msg hidden" role="alert" aria-live="assertive"></div>
       </form>
       <div class="login-hint">
         <small>מערכת ניהול תורים למספרה</small>
+        <br><small style="color:#94A3B8">נוצר על ידי <strong>דניאל כספין - דניטק</strong></small>
       </div>
     </div>
   </div>
@@ -44,14 +47,14 @@
   <!-- Main App -->
   <div id="appContainer" class="app-container hidden">
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="תפריט ראשי">
       <div class="sidebar-header">
         <div class="shop-logo">
-          <i class="fas fa-cut"></i>
+          <i class="fas fa-cut" aria-hidden="true"></i>
         </div>
         <h2 id="shopName">מספרה</h2>
       </div>
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="ניווט ראשי">
         <a href="#" class="nav-item active" data-page="dashboard">
           <i class="fas fa-tachometer-alt"></i><span>לוח בקרה</span>
         </a>
@@ -88,12 +91,13 @@
         <button class="btn-logout" id="logoutBtn">
           <i class="fas fa-sign-out-alt"></i> יציאה
         </button>
+        <div style="text-align:center;margin-top:0.5rem;font-size:0.7rem;color:#94A3B8">דניאל כספין - דניטק</div>
       </div>
     </aside>
     <div class="sidebar-overlay hidden" id="sidebarOverlay"></div>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" role="main">
       <header class="top-bar">
         <h1 id="pageTitle">לוח בקרה</h1>
         <div class="top-bar-actions">
@@ -107,7 +111,7 @@
     </main>
 
     <!-- Bottom Nav (mobile only) -->
-    <nav class="bottom-nav" id="bottomNav">
+    <nav class="bottom-nav" id="bottomNav" aria-label="ניווט מהיר">
       <a href="#" class="bottom-nav-item active" data-page="dashboard">
         <i class="fas fa-home"></i><span>ראשי</span>
       </a>
@@ -131,7 +135,7 @@
       <div class="more-menu-sheet">
         <div class="more-menu-header">
           <span id="moreMenuUser">מנהל</span>
-          <button class="more-menu-close" id="moreMenuClose"><i class="fas fa-times"></i></button>
+          <button class="more-menu-close" id="moreMenuClose" aria-label="סגור תפריט"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <a href="#" class="more-menu-item" data-page="clients"><i class="fas fa-users"></i> לקוחות</a>
         <a href="#" class="more-menu-item" data-page="barbers"><i class="fas fa-user-tie"></i> ספרים</a>
@@ -144,18 +148,34 @@
   </div>
 
   <!-- Modal -->
-  <div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal-overlay hidden" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal" id="modal">
       <div class="modal-header">
         <h3 id="modalTitle">כותרת</h3>
-        <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+        <button class="modal-close" id="modalClose" aria-label="סגור חלון"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>
       <div class="modal-body" id="modalBody"></div>
     </div>
   </div>
 
   <!-- Toast -->
-  <div id="toastContainer" class="toast-container"></div>
+  <div id="toastContainer" class="toast-container" role="status" aria-live="polite"></div>
+
+  <!-- Accessibility Widget -->
+  <div class="a11y-widget" id="a11yWidget">
+    <button class="a11y-toggle" id="a11yToggle" aria-label="תפריט נגישות" title="נגישות">
+      <i class="fas fa-universal-access" aria-hidden="true"></i>
+    </button>
+    <div class="a11y-panel hidden" id="a11yPanel" role="region" aria-label="אפשרויות נגישות">
+      <h4>נגישות</h4>
+      <button onclick="a11yFontSize(1)" aria-label="הגדל גופן"><i class="fas fa-plus" aria-hidden="true"></i> הגדל גופן</button>
+      <button onclick="a11yFontSize(-1)" aria-label="הקטן גופן"><i class="fas fa-minus" aria-hidden="true"></i> הקטן גופן</button>
+      <button onclick="a11yFontSize(0)" aria-label="אפס גודל גופן"><i class="fas fa-undo" aria-hidden="true"></i> גופן רגיל</button>
+      <button onclick="a11yContrast()" aria-label="החלף ניגודיות"><i class="fas fa-adjust" aria-hidden="true"></i> ניגודיות גבוהה</button>
+      <button onclick="a11yLinks()" aria-label="הדגש קישורים"><i class="fas fa-link" aria-hidden="true"></i> הדגש קישורים</button>
+      <a href="/accessibility.html" style="display:block;text-align:center;margin-top:0.5rem;color:var(--primary);font-size:0.85rem">הצהרת נגישות</a>
+    </div>
+  </div>
 
   <script src="/js/app.js"></script>
 </body>
