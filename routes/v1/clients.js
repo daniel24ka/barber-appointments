@@ -5,11 +5,27 @@ const { authenticateToken } = require('../../middleware/auth');
 
 router.use(authenticateToken);
 
-// Get all clients
+// Loyalty tier logic
+function getLoyaltyTier(totalVisits) {
+  if (totalVisits >= 20) return { tier: 'gold', name: 'זהב', icon: 'crown', color: '#F59E0B' };
+  if (totalVisits >= 10) return { tier: 'silver', name: 'כסף', icon: 'medal', color: '#9CA3AF' };
+  if (totalVisits >= 3) return { tier: 'bronze', name: 'ארד', icon: 'award', color: '#CD7F32' };
+  return { tier: 'new', name: 'חדש', icon: 'user', color: '#6B7280' };
+}
+
+// Days since last visit
+function daysSinceVisit(lastVisit) {
+  if (!lastVisit) return null;
+  const last = new Date(lastVisit);
+  const now = new Date();
+  return Math.floor((now - last) / (1000 * 60 * 60 * 24));
+}
+
+// Get all clients (enriched)
 router.get('/', async (req, res) => {
   try {
     const db = getDb();
-    const { search, vip } = req.query;
+    const { search, vip, tier, sort } = req.query;
 
     let sql = 'SELECT * FROM clients WHERE 1=1';
     const params = [];
@@ -29,21 +45,41 @@ router.get('/', async (req, res) => {
       params.push(vip);
     }
 
-    sql += ' ORDER BY name';
+    // Sort options
+    if (sort === 'visits') sql += ' ORDER BY total_visits DESC';
+    else if (sort === 'recent') sql += ' ORDER BY last_visit DESC NULLS LAST';
+    else if (sort === 'name') sql += ' ORDER BY name';
+    else sql += ' ORDER BY name';
+
     const result = await db.query(sql, params);
-    res.json(result.rows);
+
+    // Enrich with loyalty data
+    let clients = result.rows.map(c => {
+      const loyalty = getLoyaltyTier(c.total_visits);
+      const daysSince = daysSinceVisit(c.last_visit);
+      const churnRisk = daysSince !== null && daysSince > 60 ? 'high' : daysSince !== null && daysSince > 30 ? 'medium' : 'low';
+      return { ...c, loyalty, days_since_visit: daysSince, churn_risk: churnRisk };
+    });
+
+    // Filter by tier
+    if (tier) {
+      clients = clients.filter(c => c.loyalty.tier === tier);
+    }
+
+    res.json(clients);
   } catch (err) {
     res.status(500).json({ error: 'שגיאה בטעינת לקוחות' });
   }
 });
 
-// Get single client with history
+// Get single client with history + analytics
 router.get('/:id', async (req, res) => {
   try {
     const db = getDb();
     const client = await db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
     if (!client) return res.status(404).json({ error: 'לקוח לא נמצא' });
 
+    // Full history
     const history = await db.prepare(`
       SELECT a.*, b.name as barber_name, s.name as service_name
       FROM appointments a
@@ -54,8 +90,75 @@ router.get('/:id', async (req, res) => {
       LIMIT 50
     `).all(req.params.id);
 
-    res.json({ ...client, history });
+    // Preferred barber (most visits)
+    const preferredBarber = await db.prepare(`
+      SELECT b.id, b.name, COUNT(*) as visit_count
+      FROM appointments a
+      JOIN barbers b ON a.barber_id = b.id
+      WHERE a.client_id = ? AND a.status = 'completed'
+      GROUP BY b.id, b.name
+      ORDER BY visit_count DESC
+      LIMIT 1
+    `).get(req.params.id);
+
+    // Preferred service (most booked)
+    const preferredService = await db.prepare(`
+      SELECT s.id, s.name, COUNT(*) as book_count
+      FROM appointments a
+      JOIN services s ON a.service_id = s.id
+      WHERE a.client_id = ? AND a.status = 'completed'
+      GROUP BY s.id, s.name
+      ORDER BY book_count DESC
+      LIMIT 1
+    `).get(req.params.id);
+
+    // Total spent
+    const spentResult = await db.prepare(
+      "SELECT COALESCE(SUM(price), 0) as total_spent FROM appointments WHERE client_id = ? AND status = 'completed'"
+    ).get(req.params.id);
+
+    // Average visit interval (days between visits)
+    const completedDates = await db.prepare(
+      "SELECT DISTINCT date FROM appointments WHERE client_id = ? AND status = 'completed' ORDER BY date"
+    ).all(req.params.id);
+
+    let avgInterval = null;
+    if (completedDates.length >= 2) {
+      let totalDays = 0;
+      for (let i = 1; i < completedDates.length; i++) {
+        const d1 = new Date(completedDates[i - 1].date);
+        const d2 = new Date(completedDates[i].date);
+        totalDays += Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+      }
+      avgInterval = Math.round(totalDays / (completedDates.length - 1));
+    }
+
+    // No-show rate
+    const noShowCount = history.filter(h => h.status === 'no_show').length;
+    const completedCount = history.filter(h => h.status === 'completed').length;
+    const cancelledCount = history.filter(h => h.status === 'cancelled').length;
+
+    const loyalty = getLoyaltyTier(client.total_visits);
+    const daysSince = daysSinceVisit(client.last_visit);
+
+    res.json({
+      ...client,
+      history,
+      loyalty,
+      days_since_visit: daysSince,
+      preferred_barber: preferredBarber || null,
+      preferred_service: preferredService || null,
+      total_spent: spentResult.total_spent,
+      avg_visit_interval: avgInterval,
+      stats: {
+        completed: completedCount,
+        cancelled: cancelledCount,
+        no_show: noShowCount,
+        no_show_rate: completedCount + noShowCount > 0 ? Math.round((noShowCount / (completedCount + noShowCount)) * 100) : 0
+      }
+    });
   } catch (err) {
+    console.error('Get client error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת לקוח' });
   }
 });

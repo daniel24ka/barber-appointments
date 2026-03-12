@@ -42,6 +42,8 @@ function closeModal() { document.getElementById('modalOverlay').classList.add('h
 const DAYS_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const STATUS_HE = { pending: 'ממתין', confirmed: 'מאושר', completed: 'הושלם', cancelled: 'בוטל', no_show: 'לא הגיע' };
+const TIER_HE = { gold: { name: 'זהב', icon: 'crown', color: '#F59E0B' }, silver: { name: 'כסף', icon: 'medal', color: '#9CA3AF' }, bronze: { name: 'ארד', icon: 'award', color: '#CD7F32' }, new: { name: 'חדש', icon: 'user', color: '#6B7280' } };
+function tierBadge(loyalty) { if (!loyalty) return ''; const t = loyalty; return `<span class="badge" style="background:${t.color};color:#fff"><i class="fas fa-${t.icon}"></i> ${t.name}</span>`; }
 
 function formatDate(d) { const dt = new Date(d); return `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`; }
 function dateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -147,6 +149,11 @@ async function renderDashboard() {
         <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h4>הכנסות החודש</h4><div class="stat-value">₪${stats.monthRevenue}</div></div></div>
       </div>
 
+      <div class="stats-grid" style="margin-top:.5rem">
+        <div class="stat-card"><div class="stat-icon" style="background:#FDE68A;color:#92400E"><i class="fas fa-user-plus"></i></div><div class="stat-info"><h4>לקוחות חדשים החודש</h4><div class="stat-value">${stats.newClientsMonth || 0}</div></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5;color:#065F46"><i class="fas fa-redo"></i></div><div class="stat-info"><h4>אחוז לקוחות חוזרים</h4><div class="stat-value">${stats.returningRate || 0}%</div></div></div>
+      </div>
+
       <div class="dashboard-grid">
         <div class="card">
           <div class="card-header"><h3><i class="fas fa-bell"></i> תזכורות - תורים ממתינים</h3></div>
@@ -173,6 +180,37 @@ async function renderDashboard() {
               </div>
             `).join('')}
           </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid" style="margin-top:1rem">
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-trophy" style="color:#F59E0B"></i> לקוחות מובילים</h3></div>
+          ${stats.topClients?.length ? stats.topClients.map((c, i) => `
+            <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewClient(${c.id})">
+              <span style="font-weight:700;color:${i===0?'#F59E0B':i===1?'#9CA3AF':i===2?'#CD7F32':'var(--text-secondary)'};font-size:1.1rem;width:1.5rem">${i+1}</span>
+              <div style="flex:1">
+                <strong>${escHtml(c.name)}</strong> ${c.vip ? '<span class="badge badge-vip" style="font-size:.65rem">VIP</span>' : ''}
+                <div style="font-size:.8rem;color:var(--text-secondary)">${c.total_visits} ביקורים</div>
+              </div>
+            </div>
+          `).join('') : '<div class="empty-state" style="padding:1rem"><small>אין נתונים עדיין</small></div>'}
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-user-clock" style="color:#EF4444"></i> לקוחות בסיכון נטישה</h3></div>
+          ${stats.atRiskClients?.length ? stats.atRiskClients.map(c => {
+            const days = Math.floor((new Date() - new Date(c.last_visit)) / (1000*60*60*24));
+            return `
+            <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewClient(${c.id})">
+              <i class="fas fa-exclamation-triangle" style="color:${days > 60 ? '#EF4444' : '#F59E0B'}"></i>
+              <div style="flex:1">
+                <strong>${escHtml(c.name)}</strong>
+                <div style="font-size:.8rem;color:var(--text-secondary)">לא ביקר ${days} ימים · ${c.total_visits} ביקורים</div>
+              </div>
+              <a href="tel:${escAttr(c.phone)}" class="btn btn-sm btn-outline" onclick="event.stopPropagation()" title="התקשר"><i class="fas fa-phone"></i></a>
+            </div>`;
+          }).join('') : '<div class="empty-state" style="padding:1rem"><i class="fas fa-check-circle" style="color:#10B981"></i><small>אין לקוחות בסיכון</small></div>'}
         </div>
       </div>
 
@@ -591,10 +629,10 @@ async function searchClientsForBooking(term) {
     const clients = await api(`/clients?search=${encodeURIComponent(term)}`);
     container.innerHTML = clients.slice(0, 8).map(c => `
       <div class="client-card" onclick="selectClientForBooking(${c.id}, '${escAttr(c.name)}', '${escAttr(c.phone)}')">
-        <div class="client-avatar">${escHtml(getInitials(c.name))}</div>
+        <div class="client-avatar" style="${c.loyalty ? `background:${c.loyalty.color}` : ''}">${escHtml(getInitials(c.name))}</div>
         <div class="client-details">
-          <h4>${escHtml(c.name)} ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''}</h4>
-          <p>${escHtml(c.phone)}</p>
+          <h4>${escHtml(c.name)} ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''} ${c.loyalty ? tierBadge(c.loyalty) : ''}</h4>
+          <p>${escHtml(c.phone)} ${c.total_visits > 0 ? `· ${c.total_visits} ביקורים` : '· לקוח חדש'}</p>
         </div>
       </div>
     `).join('');
@@ -671,54 +709,89 @@ async function renderClients() {
   const area = document.getElementById('contentArea');
   area.innerHTML = `
     <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="clientSearchMain" placeholder="חפש לקוח..." oninput="loadClients(this.value)"></div>
+    <div class="client-filters" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
+      <button class="btn btn-sm btn-outline filter-active" onclick="filterClients('all',this)">הכל</button>
+      <button class="btn btn-sm btn-outline" onclick="filterClients('gold',this)" style="border-color:#F59E0B;color:#F59E0B"><i class="fas fa-crown"></i> זהב</button>
+      <button class="btn btn-sm btn-outline" onclick="filterClients('silver',this)" style="border-color:#9CA3AF;color:#9CA3AF"><i class="fas fa-medal"></i> כסף</button>
+      <button class="btn btn-sm btn-outline" onclick="filterClients('bronze',this)" style="border-color:#CD7F32;color:#CD7F32"><i class="fas fa-award"></i> ארד</button>
+      <button class="btn btn-sm btn-outline" onclick="filterClients('risk',this)"><i class="fas fa-exclamation-triangle" style="color:#EF4444"></i> בסיכון</button>
+      <select id="clientSort" onchange="loadClients(document.getElementById('clientSearchMain').value)" style="margin-right:auto;padding:.35rem;border-radius:6px;border:1px solid var(--border)">
+        <option value="name">מיין לפי שם</option>
+        <option value="visits">מיין לפי ביקורים</option>
+        <option value="recent">מיין לפי ביקור אחרון</option>
+      </select>
+    </div>
     <div class="card">
       <div class="card-header"><h3>רשימת לקוחות</h3><button class="btn btn-primary btn-sm" onclick="showNewClientPage()"><i class="fas fa-user-plus"></i> לקוח חדש</button></div>
       <div id="clientsList"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div></div>
     </div>
   `;
+  App._clientFilter = 'all';
   loadClients('');
+}
+
+function filterClients(filter, el) {
+  App._clientFilter = filter;
+  document.querySelectorAll('.client-filters .btn').forEach(b => b.classList.remove('filter-active'));
+  el.classList.add('filter-active');
+  loadClients(document.getElementById('clientSearchMain').value);
 }
 
 async function loadClients(search) {
   try {
-    const clients = await api(`/clients${search ? `?search=${encodeURIComponent(search)}` : ''}`);
+    const sort = document.getElementById('clientSort')?.value || 'name';
+    const filter = App._clientFilter || 'all';
+    let url = `/clients?sort=${sort}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (filter !== 'all' && filter !== 'risk') url += `&tier=${filter}`;
+
+    let clients = await api(url);
     const container = document.getElementById('clientsList');
+
+    // Client-side filter for "at risk" (30+ days since last visit)
+    if (filter === 'risk') {
+      clients = clients.filter(c => c.churn_risk === 'high' || c.churn_risk === 'medium');
+    }
 
     if (!clients.length) { container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><h3>לא נמצאו לקוחות</h3></div>'; return; }
 
     const isMobile = window.innerWidth <= 768;
     if (isMobile) {
-      container.innerHTML = `<div class="cards-list">${clients.map(c => `
+      container.innerHTML = `<div class="cards-list">${clients.map(c => {
+        const riskIcon = c.churn_risk === 'high' ? '<i class="fas fa-exclamation-circle" style="color:#EF4444" title="לא ביקר מעל 60 יום"></i> ' : c.churn_risk === 'medium' ? '<i class="fas fa-exclamation-triangle" style="color:#F59E0B" title="לא ביקר מעל 30 יום"></i> ' : '';
+        return `
         <div class="info-card">
           <div class="info-card-header">
-            <strong>${c.name}</strong>
+            ${riskIcon}<strong>${escHtml(c.name)}</strong>
+            ${tierBadge(c.loyalty)}
             ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''}
           </div>
           <div class="info-card-body">
-            <div class="info-card-row"><span class="info-label">טלפון:</span> <a href="tel:${c.phone}">${c.phone}</a></div>
-            ${c.email ? `<div class="info-card-row"><span class="info-label">אימייל:</span> ${c.email}</div>` : ''}
+            <div class="info-card-row"><span class="info-label">טלפון:</span> <a href="tel:${escAttr(c.phone)}">${escHtml(c.phone)}</a></div>
             <div class="info-card-row"><span class="info-label">ביקורים:</span> ${c.total_visits}</div>
-            ${c.last_visit ? `<div class="info-card-row"><span class="info-label">ביקור אחרון:</span> ${formatDate(c.last_visit)}</div>` : ''}
+            ${c.days_since_visit !== null ? `<div class="info-card-row"><span class="info-label">ביקור אחרון:</span> לפני ${c.days_since_visit} ימים</div>` : ''}
           </div>
           <div class="info-card-actions">
             <button class="btn btn-sm btn-outline" onclick="viewClient(${c.id})"><i class="fas fa-eye"></i> צפה</button>
             <button class="btn btn-sm btn-outline" onclick="editClient(${c.id})"><i class="fas fa-edit"></i> עריכה</button>
             <button class="btn btn-sm btn-danger" onclick="deleteClient(${c.id}, '${escAttr(c.name)}')"><i class="fas fa-trash"></i> מחק</button>
           </div>
-        </div>
-      `).join('')}</div>`;
+        </div>`;
+      }).join('')}</div>`;
     } else {
       container.innerHTML = `
         <div class="table-container"><table>
-          <thead><tr><th>שם</th><th>טלפון</th><th>אימייל</th><th>ביקורים</th><th>ביקור אחרון</th><th>VIP</th><th>פעולות</th></tr></thead>
-          <tbody>${clients.map(c => `
+          <thead><tr><th>שם</th><th>דרגה</th><th>טלפון</th><th>ביקורים</th><th>ביקור אחרון</th><th>סטטוס</th><th>פעולות</th></tr></thead>
+          <tbody>${clients.map(c => {
+            const riskIcon = c.churn_risk === 'high' ? '<i class="fas fa-exclamation-circle" style="color:#EF4444" title="בסיכון גבוה"></i>' : c.churn_risk === 'medium' ? '<i class="fas fa-exclamation-triangle" style="color:#F59E0B" title="בסיכון"></i>' : '<i class="fas fa-check-circle" style="color:#10B981"></i>';
+            return `
             <tr>
-              <td><strong>${c.name}</strong></td>
-              <td><a href="tel:${c.phone}">${c.phone}</a></td>
-              <td>${c.email || '-'}</td>
+              <td><strong>${escHtml(c.name)}</strong></td>
+              <td>${tierBadge(c.loyalty)}</td>
+              <td><a href="tel:${escAttr(c.phone)}">${escHtml(c.phone)}</a></td>
               <td>${c.total_visits}</td>
-              <td>${c.last_visit ? formatDate(c.last_visit) : '-'}</td>
-              <td>${c.vip ? '<span class="badge badge-vip">VIP</span>' : '-'}</td>
+              <td>${c.days_since_visit !== null ? `לפני ${c.days_since_visit} ימים` : '-'}</td>
+              <td>${riskIcon} ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''}</td>
               <td>
                 <div class="btn-group">
                   <button class="btn btn-sm btn-outline" onclick="viewClient(${c.id})"><i class="fas fa-eye"></i></button>
@@ -726,8 +799,8 @@ async function loadClients(search) {
                   <button class="btn btn-sm btn-danger" onclick="deleteClient(${c.id}, '${escAttr(c.name)}')"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
-            </tr>
-          `).join('')}</tbody>
+            </tr>`;
+          }).join('')}</tbody>
         </table></div>
       `;
     }
@@ -737,15 +810,44 @@ async function loadClients(search) {
 async function viewClient(id) {
   try {
     const c = await api(`/clients/${id}`);
+    const riskLabel = c.days_since_visit !== null && c.days_since_visit > 60 ? '<span class="badge" style="background:#EF4444;color:#fff">בסיכון נטישה</span>' : c.days_since_visit !== null && c.days_since_visit > 30 ? '<span class="badge" style="background:#F59E0B;color:#fff">לא ביקר זמן רב</span>' : '';
+
     openModal(`פרטי לקוח - ${escHtml(c.name)}`, `
-      <div style="display:grid;gap:.5rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap">
+        ${tierBadge(c.loyalty)}
+        ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''}
+        ${riskLabel}
+      </div>
+
+      <div class="client-stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin-bottom:1rem">
+        <div style="background:var(--bg);padding:.6rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:1.3rem;font-weight:700;color:var(--primary)">${c.total_visits}</div>
+          <div style="font-size:.75rem;color:var(--text-secondary)">ביקורים</div>
+        </div>
+        <div style="background:var(--bg);padding:.6rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:1.3rem;font-weight:700;color:#10B981">₪${c.total_spent || 0}</div>
+          <div style="font-size:.75rem;color:var(--text-secondary)">סה"כ הוצאה</div>
+        </div>
+        <div style="background:var(--bg);padding:.6rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:1.3rem;font-weight:700;color:var(--primary)">${c.days_since_visit !== null ? c.days_since_visit : '-'}</div>
+          <div style="font-size:.75rem;color:var(--text-secondary)">ימים מביקור אחרון</div>
+        </div>
+        <div style="background:var(--bg);padding:.6rem;border-radius:8px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:1.3rem;font-weight:700;color:${c.stats?.no_show_rate > 20 ? '#EF4444' : 'var(--primary)'}">${c.stats?.no_show_rate || 0}%</div>
+          <div style="font-size:.75rem;color:var(--text-secondary)">אי הגעה</div>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:.4rem;margin-bottom:1rem">
         <div><strong>טלפון:</strong> <a href="tel:${escAttr(c.phone)}">${escHtml(c.phone)}</a></div>
         <div><strong>אימייל:</strong> ${escHtml(c.email || '-')}</div>
+        ${c.preferred_barber ? `<div><strong>ספר מועדף:</strong> ${escHtml(c.preferred_barber.name)} (${c.preferred_barber.visit_count} ביקורים)</div>` : ''}
+        ${c.preferred_service ? `<div><strong>שירות מועדף:</strong> ${escHtml(c.preferred_service.name)} (${c.preferred_service.book_count} פעמים)</div>` : ''}
+        ${c.avg_visit_interval ? `<div><strong>תדירות ביקורים:</strong> כל ${c.avg_visit_interval} ימים בממוצע</div>` : ''}
         <div><strong>הערות:</strong> ${escHtml(c.notes || '-')}</div>
-        <div><strong>ביקורים:</strong> ${c.total_visits}</div>
-        <div><strong>VIP:</strong> ${c.vip ? 'כן' : 'לא'}</div>
       </div>
-      <h4 style="margin-bottom:.5rem">היסטוריית תורים</h4>
+
+      <h4 style="margin-bottom:.5rem">היסטוריית תורים (${c.history.length})</h4>
       <div class="table-container"><table>
         <thead><tr><th>תאריך</th><th>שעה</th><th>ספר</th><th>שירות</th><th>סטטוס</th></tr></thead>
         <tbody>${c.history.length ? c.history.map(h => `

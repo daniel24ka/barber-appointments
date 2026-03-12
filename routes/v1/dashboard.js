@@ -27,7 +27,8 @@ router.get('/stats', async (req, res) => {
     // Upcoming appointments (next 10)
     const upcoming = await db.prepare(`
       SELECT a.*, c.name as client_name, c.phone as client_phone,
-             b.name as barber_name, s.name as service_name
+             b.name as barber_name, b.color as barber_color, s.name as service_name,
+             c.total_visits as client_visits, c.vip as client_vip
       FROM appointments a
       JOIN clients c ON a.client_id = c.id
       JOIN barbers b ON a.barber_id = b.id
@@ -57,6 +58,35 @@ router.get('/stats', async (req, res) => {
       weekDays.push({ date: ds, day: d.getDay(), count });
     }
 
+    // Top 5 clients (by visits)
+    const topClients = await db.prepare(`
+      SELECT id, name, phone, total_visits, vip, last_visit
+      FROM clients
+      WHERE total_visits > 0
+      ORDER BY total_visits DESC
+      LIMIT 5
+    `).all();
+
+    // Clients at risk (visited before but not in 30+ days)
+    const atRiskClients = await db.prepare(`
+      SELECT id, name, phone, total_visits, last_visit
+      FROM clients
+      WHERE last_visit IS NOT NULL
+      AND last_visit < NOW() - INTERVAL '30 days'
+      ORDER BY last_visit ASC
+      LIMIT 5
+    `).all();
+
+    // New clients this month
+    const newClientsMonth = (await db.prepare(
+      "SELECT COUNT(*) as c FROM clients WHERE created_at >= ?"
+    ).get(monthStart)).c;
+
+    // Returning client rate (clients with 2+ visits / total clients with visits)
+    const clientsWithVisits = (await db.prepare("SELECT COUNT(*) as c FROM clients WHERE total_visits > 0").get()).c;
+    const returningClients = (await db.prepare("SELECT COUNT(*) as c FROM clients WHERE total_visits >= 2").get()).c;
+    const returningRate = clientsWithVisits > 0 ? Math.round((returningClients / clientsWithVisits) * 100) : 0;
+
     res.json({
       todayAppointments: todayAppts,
       pendingAppointments: pendingAppts,
@@ -66,7 +96,11 @@ router.get('/stats', async (req, res) => {
       monthRevenue,
       upcoming,
       reminders,
-      weekStats: weekDays
+      weekStats: weekDays,
+      topClients,
+      atRiskClients,
+      newClientsMonth,
+      returningRate
     });
   } catch (err) {
     console.error('Dashboard error:', err);
