@@ -480,6 +480,43 @@ body.high-contrast input, body.high-contrast select, body.high-contrast textarea
 body.highlight-links a { outline: 2px solid var(--primary) !important; text-decoration: underline !important; }
 body.highlight-links button { outline: 2px dashed var(--warning) !important; }
 
+/* === Loading Button === */
+.btn.loading {
+  pointer-events: none;
+  opacity: 0.75;
+  position: relative;
+}
+.btn.loading::after {
+  content: '';
+  width: 16px; height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: btnSpin 0.6s linear infinite;
+  margin-right: 0.5rem;
+}
+@keyframes btnSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Page Transition === */
+.content-area {
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Improved Transitions === */
+.btn { transition: all 0.15s ease; }
+.card { transition: box-shadow 0.2s ease; }
+.card:hover { box-shadow: var(--shadow-lg); }
+.nav-item { transition: all 0.15s ease; }
+.stat-card { transition: all 0.2s ease; }
+.info-card { transition: all 0.15s ease; }
+.info-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow); }
+
 @media (max-width: 768px) {
   .a11y-widget { bottom: 76px; left: 0.5rem; }
   .a11y-toggle { width: 42px; height: 42px; font-size: 1.1rem; }

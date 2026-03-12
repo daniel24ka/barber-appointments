@@ -298,12 +298,6 @@ async function initDatabase() {
     console.error('Super admin creation error:', e.message);
   }
 
-  // Debug: log existing users
-  try {
-    const users = await pool.query("SELECT id, username, role, active, tenant_id FROM users");
-    console.log('Existing users:', JSON.stringify(users.rows));
-  } catch(e) {}
-
   console.log('Database initialized (PostgreSQL - Multi-tenant)');
   return db;
 }

@@ -1039,7 +1039,7 @@ async function renderBarbers() {
   area.innerHTML = `
     <div class="card">
       <div class="card-header"><h3>ניהול ספרים</h3>
-        ${App.user.role==='admin'?'<button class="btn btn-primary btn-sm" onclick="showNewBarberModal()"><i class="fas fa-plus"></i> ספר חדש</button>':''}
+        ${['admin','super_admin'].includes(App.user.role)?'<button class="btn btn-primary btn-sm" onclick="showNewBarberModal()"><i class="fas fa-plus"></i> ספר חדש</button>':''}
       </div>
       <div id="barbersList"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div></div>
     </div>
@@ -1066,7 +1066,7 @@ async function renderBarbers() {
           <div class="info-card-actions">
             <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i> עריכה</button>
             <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i> ימי חופש</button>
-            ${App.user.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteBarber(${b.id}, '${escAttr(b.name)}')"><i class="fas fa-trash"></i> הסר</button>`:''}
+            ${['admin','super_admin'].includes(App.user.role)?`<button class="btn btn-sm btn-danger" onclick="deleteBarber(${b.id}, '${escAttr(b.name)}')"><i class="fas fa-trash"></i> הסר</button>`:''}
           </div>
         </div>
       `).join('')}</div>`;
@@ -1085,7 +1085,7 @@ async function renderBarbers() {
               <div class="btn-group">
                 <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i></button>
                 <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i></button>
-                ${App.user.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteBarber(${b.id}, '${escAttr(b.name)}')"><i class="fas fa-trash"></i></button>`:''}
+                ${['admin','super_admin'].includes(App.user.role)?`<button class="btn btn-sm btn-danger" onclick="deleteBarber(${b.id}, '${escAttr(b.name)}')"><i class="fas fa-trash"></i></button>`:''}
               </div>
             </td>
           </tr>
@@ -1237,7 +1237,7 @@ async function renderServices() {
   area.innerHTML = `
     <div class="card">
       <div class="card-header"><h3>ניהול שירותים</h3>
-        ${App.user.role==='admin'?'<button class="btn btn-primary btn-sm" onclick="showNewServiceModal()"><i class="fas fa-plus"></i> שירות חדש</button>':''}
+        ${['admin','super_admin'].includes(App.user.role)?'<button class="btn btn-primary btn-sm" onclick="showNewServiceModal()"><i class="fas fa-plus"></i> שירות חדש</button>':''}
       </div>
       <div id="servicesList"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div></div>
     </div>
@@ -1259,7 +1259,7 @@ async function renderServices() {
             <div class="info-card-row"><span class="info-label">משך:</span> ${s.duration} דק'</div>
             <div class="info-card-row"><span class="info-label">מחיר:</span> ₪${s.price}</div>
           </div>
-          ${App.user.role==='admin'?`<div class="info-card-actions">
+          ${['admin','super_admin'].includes(App.user.role)?`<div class="info-card-actions">
             <button class="btn btn-sm btn-outline" onclick="editService(${s.id})"><i class="fas fa-edit"></i> עריכה</button>
             <button class="btn btn-sm btn-danger" onclick="deleteService(${s.id})"><i class="fas fa-trash"></i> מחיקה</button>
           </div>`:''}
@@ -1277,7 +1277,7 @@ async function renderServices() {
               <td>${s.duration} דק'</td>
               <td>₪${s.price}</td>
               <td>
-                ${App.user.role==='admin'?`<div class="btn-group">
+                ${['admin','super_admin'].includes(App.user.role)?`<div class="btn-group">
                   <button class="btn btn-sm btn-outline" onclick="editService(${s.id})"><i class="fas fa-edit"></i></button>
                   <button class="btn btn-sm btn-danger" onclick="deleteService(${s.id})"><i class="fas fa-trash"></i></button>
                 </div>`:''}
@@ -1488,7 +1488,7 @@ function exportCsv(type) {
 // === Settings ===
 async function renderSettings() {
   const area = document.getElementById('contentArea');
-  const isAdmin = App.user.role === 'admin';
+  const isAdmin = ['admin','super_admin'].includes(App.user.role);
 
   try {
     let settingsHtml = '';
@@ -1697,6 +1697,9 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     const errEl = document.getElementById('loginError');
     errEl.classList.add('hidden');
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.classList.add('loading');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> מתחבר...';
     try {
       const data = await fetch('/api/auth/login', {
         method: 'POST',
@@ -1708,8 +1711,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }).then(r => r.json());
 
       if (data.token) { login(data.token, data.user); }
-      else { errEl.textContent = data.error || 'שגיאה'; errEl.classList.remove('hidden'); }
-    } catch(err) { errEl.textContent = 'שגיאת חיבור'; errEl.classList.remove('hidden'); }
+      else { errEl.textContent = data.error || 'שגיאה'; errEl.classList.remove('hidden'); btn.classList.remove('loading'); btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> התחבר'; }
+    } catch(err) { errEl.textContent = 'שגיאת חיבור'; errEl.classList.remove('hidden'); btn.classList.remove('loading'); btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> התחבר'; }
   });
 
   // Navigation clicks
