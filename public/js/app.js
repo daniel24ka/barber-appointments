@@ -71,9 +71,17 @@ async function showApp() {
   document.getElementById('todayDate').textContent = formatDate(new Date());
 
   if (App.user.role !== 'admin') {
-    document.getElementById('settingsNav').classList.add('hidden');
+    // Non-admin: show settings as "profile" for password change
+    const settingsNav = document.getElementById('settingsNav');
+    if (settingsNav) {
+      const label = settingsNav.querySelector('span') || settingsNav;
+      if (label.textContent === 'הגדרות') label.textContent = 'פרופיל';
+    }
     const settingsMore = document.getElementById('settingsMoreNav');
-    if (settingsMore) settingsMore.style.display = 'none';
+    if (settingsMore) {
+      const label = settingsMore.querySelector('span');
+      if (label && label.textContent === 'הגדרות') label.textContent = 'פרופיל';
+    }
   }
 
   try {
@@ -197,7 +205,7 @@ async function renderDashboard() {
         </div>
       </div>
     `;
-  } catch(e) { area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>${e.message}</h3></div>`; }
+  } catch(e) { area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>${escHtml(e.message)}</h3></div>`; }
 }
 
 async function updateApptStatus(id, status) {
@@ -265,7 +273,7 @@ async function renderCalendar() {
     const appts = await api(`/appointments${queryParams}`);
     if (view === 'weekly') renderWeeklyCalendar(appts, weekStart);
     else renderDailyCalendar(appts, d);
-  } catch(e) { document.getElementById('calendarBody').innerHTML = `<div class="empty-state"><h3>${e.message}</h3></div>`; }
+  } catch(e) { document.getElementById('calendarBody').innerHTML = `<div class="empty-state"><h3>${escHtml(e.message)}</h3></div>`; }
 }
 
 function calendarNav(dir) {
@@ -548,7 +556,7 @@ async function loadAvailableSlots() {
   try {
     const data = await api(`/appointments/slots/${barberId}/${date}?service_id=${serviceId}`);
     if (data.reason) {
-      container.innerHTML = `<div class="empty-state"><small>${data.reason}</small></div>`;
+      container.innerHTML = `<div class="empty-state"><small>${escHtml(data.reason)}</small></div>`;
       return;
     }
     if (!data.slots.length) {
@@ -566,7 +574,7 @@ async function loadAvailableSlots() {
       if (btn) selectSlot(btn, App.quickBookTime);
       App.quickBookTime = null;
     }
-  } catch(e) { container.innerHTML = `<div class="empty-state"><small>${e.message}</small></div>`; }
+  } catch(e) { container.innerHTML = `<div class="empty-state"><small>${escHtml(e.message)}</small></div>`; }
 }
 
 function selectSlot(el, time) {
@@ -1163,33 +1171,67 @@ async function deleteService(id) {
 
 // === Settings ===
 async function renderSettings() {
-  if (App.user.role !== 'admin') { navigate('dashboard'); return; }
-
   const area = document.getElementById('contentArea');
+  const isAdmin = App.user.role === 'admin';
+
   try {
-    const settings = await api('/settings');
+    let settingsHtml = '';
+
+    if (isAdmin) {
+      const settings = await api('/settings');
+      settingsHtml = `
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-cog"></i> הגדרות מערכת</h3></div>
+          <div class="settings-section">
+            <h3>פרטי המספרה</h3>
+            <div class="form-group"><label>שם המספרה</label><input type="text" id="setShopName" value="${escAttr(settings.shop_name || '')}"></div>
+            <div class="form-row">
+              <div class="form-group"><label>טלפון</label><input type="text" id="setShopPhone" value="${escAttr(settings.shop_phone || '')}"></div>
+              <div class="form-group"><label>כתובת</label><input type="text" id="setShopAddress" value="${escAttr(settings.shop_address || '')}"></div>
+            </div>
+          </div>
+          <div class="settings-section">
+            <h3>שעות פעילות</h3>
+            <div class="form-row">
+              <div class="form-group"><label>שעת פתיחה</label><input type="time" id="setOpenTime" value="${settings.open_time || '09:00'}"></div>
+              <div class="form-group"><label>שעת סגירה</label><input type="time" id="setCloseTime" value="${settings.close_time || '20:00'}"></div>
+            </div>
+            <div class="form-group"><label>מרווח משבצות (דקות)</label><input type="number" id="setSlotInterval" value="${settings.slot_interval || 15}" min="5" max="60"></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> שמור הגדרות</button>
+        </div>
+      `;
+    }
+
+    // Password change - available to all users
     area.innerHTML = `
-      <div class="card">
-        <div class="card-header"><h3><i class="fas fa-cog"></i> הגדרות מערכת</h3></div>
-        <div class="settings-section">
-          <h3>פרטי המספרה</h3>
-          <div class="form-group"><label>שם המספרה</label><input type="text" id="setShopName" value="${settings.shop_name || ''}"></div>
-          <div class="form-row">
-            <div class="form-group"><label>טלפון</label><input type="text" id="setShopPhone" value="${settings.shop_phone || ''}"></div>
-            <div class="form-group"><label>כתובת</label><input type="text" id="setShopAddress" value="${settings.shop_address || ''}"></div>
-          </div>
-        </div>
-        <div class="settings-section">
-          <h3>שעות פעילות</h3>
-          <div class="form-row">
-            <div class="form-group"><label>שעת פתיחה</label><input type="time" id="setOpenTime" value="${settings.open_time || '09:00'}"></div>
-            <div class="form-group"><label>שעת סגירה</label><input type="time" id="setCloseTime" value="${settings.close_time || '20:00'}"></div>
-          </div>
-          <div class="form-group"><label>מרווח משבצות (דקות)</label><input type="number" id="setSlotInterval" value="${settings.slot_interval || 15}" min="5" max="60"></div>
-        </div>
-        <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> שמור הגדרות</button>
+      ${settingsHtml}
+      <div class="card" style="margin-top:1rem">
+        <div class="card-header"><h3><i class="fas fa-key"></i> שינוי סיסמה</h3></div>
+        <div class="form-group"><label>סיסמה נוכחית</label><input type="password" id="cpCurrent"></div>
+        <div class="form-group"><label>סיסמה חדשה</label><input type="password" id="cpNew" minlength="6"></div>
+        <div class="form-group"><label>אימות סיסמה חדשה</label><input type="password" id="cpConfirm" minlength="6"></div>
+        <button class="btn btn-primary" onclick="changePassword()"><i class="fas fa-save"></i> שנה סיסמה</button>
       </div>
     `;
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function changePassword() {
+  const current = document.getElementById('cpCurrent').value;
+  const newPass = document.getElementById('cpNew').value;
+  const confirm = document.getElementById('cpConfirm').value;
+
+  if (!current || !newPass) return toast('נא למלא את כל השדות', 'error');
+  if (newPass.length < 6) return toast('סיסמה חדשה חייבת להכיל לפחות 6 תווים', 'error');
+  if (newPass !== confirm) return toast('הסיסמאות לא תואמות', 'error');
+
+  try {
+    await api('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: current, newPassword: newPass }) });
+    toast('הסיסמה שונתה בהצלחה');
+    document.getElementById('cpCurrent').value = '';
+    document.getElementById('cpNew').value = '';
+    document.getElementById('cpConfirm').value = '';
   } catch(e) { toast(e.message, 'error'); }
 }
 
