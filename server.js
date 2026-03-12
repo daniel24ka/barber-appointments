@@ -67,6 +67,16 @@ const loginLimiter = rateLimit({
 });
 app.use('/api/auth/login', loginLimiter);
 
+// Stricter rate limit for registration (5 per hour per IP)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'יותר מדי ניסיונות רישום. נסה שוב בעוד שעה.' }
+});
+app.use('/api/auth/register', registerLimiter);
+
 // Stricter rate limit for public booking
 const bookingLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -102,6 +112,12 @@ app.use('/api/tenants', require('./routes/v1/tenants'));
 app.get('/book/:slug', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'book.html'));
+});
+
+// Registration page
+app.get('/register', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
 // Landing page

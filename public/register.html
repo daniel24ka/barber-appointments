@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#4F46E5">
+  <meta name="description" content="הרשמה למערכת דניטק - מערכת ניהול תורים למספרות">
+  <title>הרשמה | דניטק - מערכת ניהול תורים למספרות</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #818CF8;
+      --primary-dark: #3730A3;
+      --primary-darker: #1E1B4B;
+      --accent: #06B6D4;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --error: #EF4444;
+      --bg: #F8FAFC;
+      --text: #1E293B;
+      --text-secondary: #64748B;
+      --text-light: #94A3B8;
+      --border: #E2E8F0;
+      --white: #FFFFFF;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 24px rgba(79,70,229,0.10);
+      --shadow-lg: 0 8px 40px rgba(79,70,229,0.15);
+    }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .navbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 1.4rem;
+    }
+    .navbar-brand .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1rem;
+    }
+    .navbar-back {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+    .navbar-back:hover { color: var(--primary); }
+
+    /* Main */
+    .main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .register-container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .register-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .register-header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .register-header p {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+    }
+
+    .register-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 40px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .form-group label .required {
+      color: var(--error);
+      margin-right: 2px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper i {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      font-size: 0.95rem;
+      pointer-events: none;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px 12px 40px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Heebo', sans-serif;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    .form-group input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+      background: var(--white);
+    }
+    .form-group input.error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+    }
+    .form-group input.valid {
+      border-color: var(--success);
+    }
+    .field-error {
+      color: var(--error);
+      font-size: 0.82rem;
+      margin-top: 4px;
+      display: none;
+    }
+    .field-error.show {
+      display: block;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Password strength */
+    .password-strength {
+      margin-top: 8px;
+      display: none;
+    }
+    .password-strength.show { display: block; }
+    .strength-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .strength-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s, background 0.3s;
+      width: 0;
+    }
+    .strength-text {
+      font-size: 0.78rem;
+      color: var(--text-light);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Heebo', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(79,70,229,0.35);
+    }
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-submit .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .btn-submit.loading .spinner { display: inline-block; }
+    .btn-submit.loading .btn-text { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .form-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .form-footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .form-footer a:hover { text-decoration: underline; }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .alert.show { display: flex; align-items: center; gap: 8px; }
+    .alert-error {
+      background: #FEF2F2;
+      color: var(--error);
+      border: 1px solid #FECACA;
+    }
+
+    /* Success Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.show {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 480px;
+      padding: 40px;
+      text-align: center;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal .success-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--success), #059669);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: white;
+      font-size: 2rem;
+    }
+    .modal h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .modal .modal-subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .info-box {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: right;
+      margin-bottom: 24px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .info-row .value {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--primary);
+      direction: ltr;
+      word-break: break-all;
+    }
+    .info-row .value a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .info-row .value a:hover { text-decoration: underline; }
+
+    .btn-login {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Heebo', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-login:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(79,70,229,0.35);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .register-card { padding: 24px 20px; }
+      .form-row { grid-template-columns: 1fr; }
+      .register-header h1 { font-size: 1.6rem; }
+      .modal { padding: 28px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="/landing" class="navbar-brand">
+        <span class="logo-icon"><i class="fas fa-cut"></i></span>
+        דניטק
+      </a>
+      <a href="/landing" class="navbar-back">
+        <i class="fas fa-arrow-right"></i>
+        חזרה לדף הבית
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Form -->
+  <main class="main">
+    <div class="register-container">
+      <div class="register-header">
+        <h1>הצטרף לדניטק</h1>
+        <p>צור חשבון בחינם והתחל לנהל תורים תוך דקות</p>
+      </div>
+
+      <div class="register-card">
+        <div class="alert alert-error" id="alertError">
+          <i class="fas fa-exclamation-circle"></i>
+          <span id="alertErrorText"></span>
+        </div>
+
+        <form id="registerForm" novalidate>
+          <div class="section-title"><i class="fas fa-store"></i> פרטי העסק</div>
+
+          <div class="form-group">
+            <label><span class="required">*</span> שם העסק</label>
+            <div class="input-wrapper">
+              <i class="fas fa-store"></i>
+              <input type="text" id="shopName" placeholder='למשל: "המספרה של יוסי"' required maxlength="100">
+            </div>
+            <div class="field-error" id="shopNameError">נא להזין שם עסק</div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><span class="required">*</span> שם בעל העסק</label>
+              <div class="input-wrapper">
+                <i class="fas fa-user"></i>
+                <input type="text" id="ownerName" placeholder="שם מלא" required maxlength="100">
+              </div>
+              <div class="field-error" id="ownerNameError">נא להזין שם</div>
+            </div>
+            <div class="form-group">
+              <label><span class="required">*</span> טלפון</label>
+              <div class="input-wrapper">
+                <i class="fas fa-phone"></i>
+                <input type="tel" id="ownerPhone" placeholder="050-1234567" required dir="ltr" style="text-align:right">
+              </div>
+              <div class="field-error" id="ownerPhoneError">מספר טלפון לא תקין</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><span class="required">*</span> אימייל</label>
+            <div class="input-wrapper">
+              <i class="fas fa-envelope"></i>
+              <input type="email" id="ownerEmail" placeholder="your@email.com" required dir="ltr" style="text-align:right">
+            </div>
+            <div class="field-error" id="ownerEmailError">כתובת אימייל לא תקינה</div>
+          </div>
+
+          <hr class="divider">
+
+          <div class="section-title"><i class="fas fa-lock"></i> פרטי התחברות למערכת</div>
+
+          <div class="form-group">
+            <label><span class="required">*</span> שם משתמש</label>
+            <div class="input-wrapper">
+              <i class="fas fa-at"></i>
+              <input type="text" id="adminUsername" placeholder="באנגלית, לפחות 3 תווים" required dir="ltr" style="text-align:right" maxlength="30" autocomplete="username">
+            </div>
+            <div class="field-error" id="adminUsernameError">שם משתמש חייב להכיל 3-30 תווים באנגלית, מספרים או _</div>
+          </div>
+
+          <div class="form-group">
+            <label><span class="required">*</span> סיסמה</label>
+            <div class="input-wrapper">
+              <i class="fas fa-key"></i>
+              <input type="password" id="adminPassword" placeholder="לפחות 6 תווים" required minlength="6" autocomplete="new-password">
+            </div>
+            <div class="field-error" id="adminPasswordError">הסיסמה חייבת להכיל לפחות 6 תווים</div>
+            <div class="password-strength" id="passwordStrength">
+              <div class="strength-bar">
+                <div class="strength-bar-fill" id="strengthBarFill"></div>
+              </div>
+              <span class="strength-text" id="strengthText"></span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <span class="spinner"></span>
+            <span class="btn-text"><i class="fas fa-rocket"></i> צור חשבון בחינם</span>
+          </button>
+        </form>
+
+        <div class="form-footer">
+          כבר יש לך חשבון? <a href="/">התחבר</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal">
+      <div class="success-icon">
+        <i class="fas fa-check"></i>
+      </div>
+      <h2>נרשמת בהצלחה!</h2>
+      <p class="modal-subtitle">העסק שלך מוכן לקבל תורים</p>
+
+      <div class="info-box">
+        <div class="info-row">
+          <span class="label">שם משתמש</span>
+          <span class="value" id="modalUsername"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">עמוד הזמנת תורים</span>
+          <span class="value"><a id="modalBookingUrl" href="#" target="_blank"></a></span>
+        </div>
+        <div class="info-row">
+          <span class="label">כניסה למערכת</span>
+          <span class="value"><a id="modalLoginUrl" href="/">לחץ כאן</a></span>
+        </div>
+      </div>
+
+      <a href="/" class="btn-login">
+        <i class="fas fa-sign-in-alt"></i>
+        התחבר עכשיו
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('registerForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const alertError = document.getElementById('alertError');
+    const alertErrorText = document.getElementById('alertErrorText');
+
+    // Field references
+    const fields = {
+      shopName: { el: document.getElementById('shopName'), errorEl: document.getElementById('shopNameError') },
+      ownerName: { el: document.getElementById('ownerName'), errorEl: document.getElementById('ownerNameError') },
+      ownerPhone: { el: document.getElementById('ownerPhone'), errorEl: document.getElementById('ownerPhoneError') },
+      ownerEmail: { el: document.getElementById('ownerEmail'), errorEl: document.getElementById('ownerEmailError') },
+      adminUsername: { el: document.getElementById('adminUsername'), errorEl: document.getElementById('adminUsernameError') },
+      adminPassword: { el: document.getElementById('adminPassword'), errorEl: document.getElementById('adminPasswordError') },
+    };
+
+    // Validation rules
+    const validators = {
+      shopName: v => v.trim().length > 0,
+      ownerName: v => v.trim().length > 0,
+      ownerPhone: v => /^0[2-9][\d-]{7,9}$/.test(v.replace(/\s/g, '')),
+      ownerEmail: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+      adminUsername: v => /^[a-zA-Z0-9_]{3,30}$/.test(v),
+      adminPassword: v => v.length >= 6,
+    };
+
+    // Real-time validation
+    Object.keys(fields).forEach(key => {
+      const { el, errorEl } = fields[key];
+      el.addEventListener('input', () => {
+        const val = el.value;
+        if (val.length === 0) {
+          el.classList.remove('error', 'valid');
+          errorEl.classList.remove('show');
+        } else if (validators[key](val)) {
+          el.classList.remove('error');
+          el.classList.add('valid');
+          errorEl.classList.remove('show');
+        } else {
+          el.classList.add('error');
+          el.classList.remove('valid');
+          errorEl.classList.add('show');
+        }
+      });
+      el.addEventListener('blur', () => {
+        if (el.value.length > 0 && !validators[key](el.value)) {
+          el.classList.add('error');
+          errorEl.classList.add('show');
+        }
+      });
+    });
+
+    // Password strength indicator
+    const passwordInput = fields.adminPassword.el;
+    const strengthDiv = document.getElementById('passwordStrength');
+    const strengthFill = document.getElementById('strengthBarFill');
+    const strengthText = document.getElementById('strengthText');
+
+    passwordInput.addEventListener('input', () => {
+      const val = passwordInput.value;
+      if (val.length === 0) {
+        strengthDiv.classList.remove('show');
+        return;
+      }
+      strengthDiv.classList.add('show');
+
+      let score = 0;
+      if (val.length >= 6) score++;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^a-zA-Z0-9]/.test(val)) score++;
+
+      const levels = [
+        { width: '20%', color: '#EF4444', text: 'חלשה מאוד' },
+        { width: '40%', color: '#F59E0B', text: 'חלשה' },
+        { width: '60%', color: '#F59E0B', text: 'בינונית' },
+        { width: '80%', color: '#10B981', text: 'חזקה' },
+        { width: '100%', color: '#059669', text: 'חזקה מאוד' },
+      ];
+      const level = levels[Math.min(score, 4)];
+      strengthFill.style.width = level.width;
+      strengthFill.style.background = level.color;
+      strengthText.textContent = level.text;
+      strengthText.style.color = level.color;
+    });
+
+    // Phone auto-format
+    fields.ownerPhone.el.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/[^\d-]/g, '');
+      // Auto-add dash after prefix
+      if (val.length === 3 && !val.includes('-') && /^0[2-9]\d$/.test(val)) {
+        val = val + '-';
+        e.target.value = val;
+      }
+    });
+
+    // Username: force lowercase, no spaces
+    fields.adminUsername.el.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
+    });
+
+    // Form submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertError.classList.remove('show');
+
+      // Validate all
+      let valid = true;
+      Object.keys(fields).forEach(key => {
+        const { el, errorEl } = fields[key];
+        if (!validators[key](el.value)) {
+          el.classList.add('error');
+          errorEl.classList.add('show');
+          valid = false;
+        }
+      });
+
+      if (!valid) return;
+
+      // Submit
+      submitBtn.classList.add('loading');
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shop_name: fields.shopName.el.value.trim(),
+            owner_name: fields.ownerName.el.value.trim(),
+            owner_phone: fields.ownerPhone.el.value.trim(),
+            owner_email: fields.ownerEmail.el.value.trim(),
+            admin_username: fields.adminUsername.el.value.trim(),
+            admin_password: fields.adminPassword.el.value,
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'שגיאה ברישום');
+        }
+
+        // Success - show modal
+        const baseUrl = window.location.origin;
+        document.getElementById('modalUsername').textContent = data.username;
+        const bookingLink = document.getElementById('modalBookingUrl');
+        bookingLink.href = data.booking_url;
+        bookingLink.textContent = baseUrl + data.booking_url;
+        document.getElementById('successModal').classList.add('show');
+
+      } catch (err) {
+        alertErrorText.textContent = err.message;
+        alertError.classList.add('show');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } finally {
+        submitBtn.classList.remove('loading');
+        submitBtn.disabled = false;
+      }
+    });
+
+    // Close modal on overlay click
+    document.getElementById('successModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        // Don't close - they should click "login"
+      }
+    });
+  </script>
+</body>
+</html>
