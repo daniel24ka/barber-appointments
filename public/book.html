@@ -179,8 +179,14 @@
       </div>
     </div>
 
-    <!-- Step 2: Choose Date & Time -->
+    <!-- Step 2: Choose Service, Date & Time -->
     <div class="step" id="step2">
+      <div class="card" style="margin-bottom:1rem">
+        <h2><i class="fas fa-concierge-bell"></i> בחירת שירות</h2>
+        <div id="serviceGrid" class="barber-grid">
+          <div class="loading"><i class="fas fa-spinner"></i><br>טוען...</div>
+        </div>
+      </div>
       <div class="card">
         <h2><i class="fas fa-calendar-alt"></i> בחירת תאריך ושעה</h2>
         <div class="date-picker">
@@ -242,7 +248,9 @@ const DAYS_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי
 
 const state = {
   barbers: [],
+  services: [],
   selectedBarber: null,
+  selectedService: null,
   selectedDate: null,
   selectedSlot: null,
   currentStep: 1
@@ -251,9 +259,10 @@ const state = {
 // Init
 (async function init() {
   try {
-    const [info, barbers] = await Promise.all([
+    const [info, barbers, services] = await Promise.all([
       fetch('/api/booking/info').then(r => r.json()),
-      fetch('/api/booking/barbers').then(r => r.json())
+      fetch('/api/booking/barbers').then(r => r.json()),
+      fetch('/api/booking/services').then(r => r.json())
     ]);
 
     if (info.name) {
@@ -266,6 +275,7 @@ const state = {
     document.getElementById('shopDetails').innerHTML = details.join(' &nbsp;|&nbsp; ');
 
     state.barbers = barbers;
+    state.services = services;
     renderBarbers();
   } catch (e) {
     console.error(e);
@@ -308,6 +318,30 @@ function selectBarber(id) {
   setTimeout(() => goToStep(2), 200);
 }
 
+function renderServices() {
+  const grid = document.getElementById('serviceGrid');
+  if (!state.services.length) {
+    grid.innerHTML = '<div class="no-slots"><i class="fas fa-cut"></i>אין שירותים זמינים</div>';
+    return;
+  }
+  // Auto-select first service
+  if (!state.selectedService) state.selectedService = state.services[0];
+  grid.innerHTML = state.services.map(s => `
+    <div class="barber-card ${state.selectedService && state.selectedService.id === s.id ? 'selected' : ''}" data-id="${s.id}" onclick="selectService(${s.id})">
+      <div class="barber-avatar" style="background:${s.color || '#10B981'}"><i class="fas fa-cut"></i></div>
+      <div class="name">${s.name}</div>
+      <div class="specialty">${s.duration} דק' | ₪${s.price}</div>
+    </div>
+  `).join('');
+}
+
+function selectService(id) {
+  state.selectedService = state.services.find(s => s.id === id);
+  document.querySelectorAll('#serviceGrid .barber-card').forEach(c => c.classList.toggle('selected', parseInt(c.dataset.id) === id));
+  state.selectedSlot = null;
+  loadSlots();
+}
+
 function goToStep(step) {
   state.currentStep = step;
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -329,7 +363,7 @@ function goToStep(step) {
   // Scroll to top on step change
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (step === 2) loadSlots();
+  if (step === 2) { renderServices(); loadSlots(); }
   if (step === 3) renderSummary();
 }
 
@@ -355,7 +389,8 @@ async function loadSlots() {
   document.getElementById('dateLabel').textContent = `יום ${DAYS_HE[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
 
   try {
-    const res = await fetch(`/api/booking/slots/${state.selectedBarber.id}/${date}`);
+    const serviceParam = state.selectedService ? `?service_id=${state.selectedService.id}` : '';
+    const res = await fetch(`/api/booking/slots/${state.selectedBarber.id}/${date}${serviceParam}`);
     const data = await res.json();
 
     if (data.reason || !data.slots || data.slots.length === 0) {
@@ -386,7 +421,7 @@ function renderSummary() {
     <div class="summary-row"><span class="label">ספר</span><span class="value">${state.selectedBarber.name}</span></div>
     <div class="summary-row"><span class="label">תאריך</span><span class="value">יום ${DAYS_HE[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}</span></div>
     <div class="summary-row"><span class="label">שעה</span><span class="value">${state.selectedSlot.start} - ${state.selectedSlot.end}</span></div>
-    <div class="summary-row"><span class="label">שירות</span><span class="value">תספורת רגילה (30 דק׳)</span></div>
+    <div class="summary-row"><span class="label">שירות</span><span class="value">${state.selectedService ? state.selectedService.name + ' (' + state.selectedService.duration + ' דק\' - ₪' + state.selectedService.price + ')' : 'תספורת'}</span></div>
   `;
 }
 
@@ -412,6 +447,7 @@ async function confirmBooking() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         barber_id: state.selectedBarber.id,
+        service_id: state.selectedService ? state.selectedService.id : null,
         date: state.selectedDate,
         start_time: state.selectedSlot.start,
         client_name: name,
@@ -448,6 +484,7 @@ function showError(msg) {
 
 function resetBooking() {
   state.selectedBarber = null;
+  state.selectedService = null;
   state.selectedSlot = null;
   state.selectedDate = null;
   document.getElementById('clientName').value = '';

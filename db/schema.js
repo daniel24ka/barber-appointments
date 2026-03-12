@@ -229,6 +229,9 @@ async function initDatabase() {
   try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status)"); } catch(e) {}
   try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_clients_phone ON clients(phone)"); } catch(e) {}
   try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_clients_name ON clients(name)"); } catch(e) {}
+  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)"); } catch(e) {}
+  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_services_active ON services(active, sort_order)"); } catch(e) {}
+  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_days_off_barber_date ON days_off(barber_id, date)"); } catch(e) {}
 
   // Seed if empty
   const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get();

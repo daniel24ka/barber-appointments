@@ -13,6 +13,17 @@ router.get('/barbers', (req, res) => {
   }
 });
 
+// Get active services (public)
+router.get('/services', (req, res) => {
+  try {
+    const db = getDb();
+    const services = db.prepare('SELECT id, name, duration, price, color FROM services WHERE active = 1 ORDER BY sort_order, name').all();
+    res.json(services);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה בטעינת שירותים' });
+  }
+});
+
 // Get available slots for a barber on a date (public)
 router.get('/slots/:barber_id/:date', (req, res) => {
   try {
@@ -38,8 +49,15 @@ router.get('/slots/:barber_id/:date', (req, res) => {
     const workDays = barber.work_days.split(',').map(Number);
     if (!workDays.includes(dayOfWeek)) return res.json({ slots: [], reason: 'הספר לא עובד ביום זה' });
 
-    // Get first active service to determine slot duration
-    const service = db.prepare("SELECT * FROM services WHERE active = 1 ORDER BY sort_order ASC LIMIT 1").get();
+    // Get service duration - use service_id from query if provided, else first active service
+    const { service_id } = req.query;
+    let service;
+    if (service_id) {
+      service = db.prepare("SELECT * FROM services WHERE id = ? AND active = 1").get(service_id);
+    }
+    if (!service) {
+      service = db.prepare("SELECT * FROM services WHERE active = 1 ORDER BY sort_order ASC LIMIT 1").get();
+    }
     const slotDuration = service ? service.duration : 30;
 
     // Get existing appointments
@@ -95,7 +113,7 @@ router.get('/slots/:barber_id/:date', (req, res) => {
 router.post('/book', (req, res) => {
   try {
     const db = getDb();
-    const { barber_id, date, start_time, client_name, client_phone } = req.body;
+    const { barber_id, date, start_time, client_name, client_phone, service_id } = req.body;
 
     if (!barber_id || !date || !start_time || !client_name || !client_phone) {
       return res.status(400).json({ error: 'נא למלא את כל השדות' });
@@ -115,8 +133,14 @@ router.post('/book', (req, res) => {
       return res.status(400).json({ error: 'לא ניתן להזמין תור בתאריך שעבר' });
     }
 
-    // Get first service (regular haircut)
-    const service = db.prepare("SELECT * FROM services WHERE active = 1 ORDER BY sort_order ASC LIMIT 1").get();
+    // Get service - use provided service_id or first active service
+    let service;
+    if (service_id) {
+      service = db.prepare("SELECT * FROM services WHERE id = ? AND active = 1").get(service_id);
+    }
+    if (!service) {
+      service = db.prepare("SELECT * FROM services WHERE active = 1 ORDER BY sort_order ASC LIMIT 1").get();
+    }
     if (!service) return res.status(500).json({ error: 'לא נמצא שירות פעיל' });
 
     const barber = db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1').get(barber_id);

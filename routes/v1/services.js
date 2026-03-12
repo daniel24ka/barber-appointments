@@ -22,9 +22,11 @@ router.post('/', requireRole('admin'), (req, res) => {
     const db = getDb();
     const { name, description, duration, price, color, sort_order } = req.body;
     if (!name) return res.status(400).json({ error: 'שם השירות הוא שדה חובה' });
+    if (duration !== undefined && (duration < 5 || duration > 480)) return res.status(400).json({ error: 'משך השירות חייב להיות בין 5 ל-480 דקות' });
+    if (price !== undefined && price < 0) return res.status(400).json({ error: 'מחיר לא יכול להיות שלילי' });
 
     const result = db.prepare('INSERT INTO services (name, description, duration, price, color, sort_order) VALUES (?, ?, ?, ?, ?, ?)').run(
-      name, description || '', duration || 30, price || 0, color || '#10B981', sort_order || 0
+      name, description || '', Math.max(5, duration || 30), Math.max(0, price || 0), color || '#10B981', sort_order || 0
     );
 
     const service = db.prepare('SELECT * FROM services WHERE id = ?').get(result.lastInsertRowid);
@@ -43,10 +45,14 @@ router.put('/:id', requireRole('admin'), (req, res) => {
 
     const existing = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'שירות לא נמצא' });
+    if (duration !== undefined && (duration < 5 || duration > 480)) return res.status(400).json({ error: 'משך השירות חייב להיות בין 5 ל-480 דקות' });
+    if (price !== undefined && price < 0) return res.status(400).json({ error: 'מחיר לא יכול להיות שלילי' });
 
     db.prepare('UPDATE services SET name=?, description=?, duration=?, price=?, color=?, sort_order=? WHERE id=?').run(
-      name || existing.name, description ?? existing.description, duration || existing.duration,
-      price ?? existing.price, color || existing.color, sort_order ?? existing.sort_order, req.params.id
+      name || existing.name, description ?? existing.description,
+      duration !== undefined ? Math.max(5, duration) : existing.duration,
+      price !== undefined ? Math.max(0, price) : existing.price,
+      color || existing.color, sort_order ?? existing.sort_order, req.params.id
     );
 
     const updated = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);

@@ -25,7 +25,7 @@ function toast(message, type = 'success') {
   const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
-  el.innerHTML = `<i class="fas fa-${icons[type]}"></i> ${message}`;
+  el.innerHTML = `<i class="fas fa-${icons[type]}"></i> ${escHtml(message)}`;
   container.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3500);
 }
@@ -82,6 +82,7 @@ async function showApp() {
     ]);
     App.data.barbers = barbers;
     App.data.services = services;
+    App.data.settings = settings;
     if (settings.shop_name) document.getElementById('shopName').textContent = settings.shop_name;
   } catch(e) { console.error(e); }
 
@@ -144,7 +145,7 @@ async function renderDashboard() {
           ${stats.reminders.length ? stats.reminders.map(r => `
             <div class="reminder-item">
               <i class="fas fa-exclamation-circle"></i>
-              <div class="reminder-text"><strong>${r.client_name}</strong> - ${r.start_time} אצל ${r.barber_name}</div>
+              <div class="reminder-text"><strong>${escHtml(r.client_name)}</strong> - ${r.start_time} אצל ${escHtml(r.barber_name)}</div>
               <div class="reminder-actions">
                 <button class="btn btn-sm btn-success" onclick="updateApptStatus(${r.id},'confirmed')"><i class="fas fa-check"></i></button>
                 <button class="btn btn-sm btn-danger" onclick="updateApptStatus(${r.id},'cancelled')"><i class="fas fa-times"></i></button>
@@ -179,9 +180,9 @@ async function renderDashboard() {
                 <tr>
                   <td>${formatDate(a.date)}</td>
                   <td>${a.start_time}</td>
-                  <td>${a.client_name}</td>
-                  <td><span class="color-dot" style="background:${a.barber_color}"></span> ${a.barber_name}</td>
-                  <td>${a.service_name}</td>
+                  <td>${escHtml(a.client_name)}</td>
+                  <td><span class="color-dot" style="background:${escAttr(a.barber_color)}"></span> ${escHtml(a.barber_name)}</td>
+                  <td>${escHtml(a.service_name)}</td>
                   <td><span class="badge badge-${a.status}">${STATUS_HE[a.status]}</span></td>
                   <td>
                     <div class="btn-group">
@@ -277,8 +278,10 @@ function calendarNav(dir) {
 function renderWeeklyCalendar(appts, weekStart) {
   const body = document.getElementById('calendarBody');
   const today = dateStr(new Date());
+  const openH = parseInt((App.data.settings?.open_time || '09:00').split(':')[0]);
+  const closeH = parseInt((App.data.settings?.close_time || '20:00').split(':')[0]);
   const hours = [];
-  for (let h = 8; h <= 20; h++) hours.push(`${String(h).padStart(2,'0')}:00`);
+  for (let h = openH; h <= closeH; h++) hours.push(`${String(h).padStart(2,'0')}:00`);
 
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -301,7 +304,7 @@ function renderWeeklyCalendar(appts, weekStart) {
       const cellAppts = appts.filter(a => a.date === day.date && a.start_time >= hour && a.start_time < `${String(parseInt(hour)+1).padStart(2,'0')}:00`);
       html += `<div class="calendar-cell" onclick="quickBook('${day.date}','${hour}')">`;
       cellAppts.forEach(a => {
-        html += `<div class="calendar-appt" style="background:${a.barber_color || '#4F46E5'}" onclick="event.stopPropagation();viewAppointment(${a.id})" title="${a.client_name} - ${a.service_name}">${a.start_time} ${a.client_name}</div>`;
+        html += `<div class="calendar-appt" style="background:${escAttr(a.barber_color || '#4F46E5')}" onclick="event.stopPropagation();viewAppointment(${a.id})" title="${escAttr(a.client_name)} - ${escAttr(a.service_name)}">${a.start_time} ${escHtml(a.client_name)}</div>`;
       });
       html += `</div>`;
     });
@@ -313,8 +316,10 @@ function renderWeeklyCalendar(appts, weekStart) {
 
 function renderDailyCalendar(appts, d) {
   const body = document.getElementById('calendarBody');
+  const openH = parseInt((App.data.settings?.open_time || '09:00').split(':')[0]);
+  const closeH = parseInt((App.data.settings?.close_time || '20:00').split(':')[0]);
   const hours = [];
-  for (let h = 8; h <= 20; h++) {
+  for (let h = openH; h <= closeH; h++) {
     hours.push(`${String(h).padStart(2,'0')}:00`);
     hours.push(`${String(h).padStart(2,'0')}:30`);
   }
@@ -333,8 +338,8 @@ function renderDailyCalendar(appts, d) {
     });
     html += `<div class="calendar-cell" onclick="quickBook('${dateStr(d)}','${time}')">`;
     cellAppts.forEach(a => {
-      html += `<div class="calendar-appt" style="background:${a.barber_color || '#4F46E5'};padding:.4rem .6rem" onclick="event.stopPropagation();viewAppointment(${a.id})">
-        <strong>${a.start_time}-${a.end_time}</strong> | ${a.client_name} | ${a.barber_name} | ${a.service_name}
+      html += `<div class="calendar-appt" style="background:${escAttr(a.barber_color || '#4F46E5')};padding:.4rem .6rem" onclick="event.stopPropagation();viewAppointment(${a.id})">
+        <strong>${a.start_time}-${a.end_time}</strong> | ${escHtml(a.client_name)} | ${escHtml(a.barber_name)} | ${escHtml(a.service_name)}
         <span class="badge badge-${a.status}" style="margin-right:.5rem">${STATUS_HE[a.status]}</span>
       </div>`;
     });
@@ -392,31 +397,56 @@ async function loadAppointments() {
       return;
     }
 
-    tbody.innerHTML = `
-      <table>
-        <thead><tr><th>שעה</th><th>לקוח</th><th>טלפון</th><th>ספר</th><th>שירות</th><th>משך</th><th>מחיר</th><th>סטטוס</th><th>פעולות</th></tr></thead>
-        <tbody>${appts.map(a => `
-          <tr>
-            <td><strong>${a.start_time}-${a.end_time}</strong></td>
-            <td>${a.client_name}</td>
-            <td><a href="tel:${a.client_phone}">${a.client_phone}</a></td>
-            <td><span class="color-dot" style="background:${a.barber_color}"></span> ${a.barber_name}</td>
-            <td>${a.service_name}</td>
-            <td>${a.duration} דק'</td>
-            <td>₪${a.price || 0}</td>
-            <td><span class="badge badge-${a.status}">${STATUS_HE[a.status]}</span></td>
-            <td>
-              <div class="btn-group">
-                <button class="btn btn-sm btn-outline" onclick="viewAppointment(${a.id})" title="צפה"><i class="fas fa-eye"></i></button>
-                ${a.status==='pending'?`<button class="btn btn-sm btn-success" onclick="updateApptStatus(${a.id},'confirmed')" title="אשר"><i class="fas fa-check"></i></button>`:''}
-                ${a.status==='confirmed'?`<button class="btn btn-sm btn-primary" onclick="updateApptStatus(${a.id},'completed')" title="הושלם"><i class="fas fa-check-double"></i></button>`:''}
-                ${['pending','confirmed'].includes(a.status)?`<button class="btn btn-sm btn-danger" onclick="updateApptStatus(${a.id},'cancelled')" title="בטל"><i class="fas fa-times"></i></button>`:''}
-              </div>
-            </td>
-          </tr>
-        `).join('')}</tbody>
-      </table>
-    `;
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      tbody.innerHTML = `<div class="cards-list">${appts.map(a => `
+        <div class="info-card">
+          <div class="info-card-header">
+            <span class="badge badge-${a.status}">${STATUS_HE[a.status]}</span>
+            <strong>${a.start_time}-${a.end_time}</strong>
+          </div>
+          <div class="info-card-body">
+            <div class="info-card-row"><span class="info-label">לקוח:</span> ${escHtml(a.client_name)}</div>
+            <div class="info-card-row"><span class="info-label">טלפון:</span> <a href="tel:${escAttr(a.client_phone)}">${escHtml(a.client_phone)}</a></div>
+            <div class="info-card-row"><span class="info-label">ספר:</span> <span class="color-dot" style="background:${escAttr(a.barber_color)}"></span> ${escHtml(a.barber_name)}</div>
+            <div class="info-card-row"><span class="info-label">שירות:</span> ${escHtml(a.service_name)} (${a.duration} דק')</div>
+            <div class="info-card-row"><span class="info-label">מחיר:</span> ₪${a.price || 0}</div>
+          </div>
+          <div class="info-card-actions">
+            <button class="btn btn-sm btn-outline" onclick="viewAppointment(${a.id})"><i class="fas fa-eye"></i> צפה</button>
+            ${a.status==='pending'?`<button class="btn btn-sm btn-success" onclick="updateApptStatus(${a.id},'confirmed')"><i class="fas fa-check"></i> אשר</button>`:''}
+            ${a.status==='confirmed'?`<button class="btn btn-sm btn-primary" onclick="updateApptStatus(${a.id},'completed')"><i class="fas fa-check-double"></i> הושלם</button>`:''}
+            ${['pending','confirmed'].includes(a.status)?`<button class="btn btn-sm btn-danger" onclick="updateApptStatus(${a.id},'cancelled')"><i class="fas fa-times"></i> בטל</button>`:''}
+          </div>
+        </div>
+      `).join('')}</div>`;
+    } else {
+      tbody.innerHTML = `
+        <table>
+          <thead><tr><th>שעה</th><th>לקוח</th><th>טלפון</th><th>ספר</th><th>שירות</th><th>משך</th><th>מחיר</th><th>סטטוס</th><th>פעולות</th></tr></thead>
+          <tbody>${appts.map(a => `
+            <tr>
+              <td><strong>${a.start_time}-${a.end_time}</strong></td>
+              <td>${escHtml(a.client_name)}</td>
+              <td><a href="tel:${escAttr(a.client_phone)}">${escHtml(a.client_phone)}</a></td>
+              <td><span class="color-dot" style="background:${escAttr(a.barber_color)}"></span> ${escHtml(a.barber_name)}</td>
+              <td>${escHtml(a.service_name)}</td>
+              <td>${a.duration} דק'</td>
+              <td>₪${a.price || 0}</td>
+              <td><span class="badge badge-${a.status}">${STATUS_HE[a.status]}</span></td>
+              <td>
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-outline" onclick="viewAppointment(${a.id})" title="צפה"><i class="fas fa-eye"></i></button>
+                  ${a.status==='pending'?`<button class="btn btn-sm btn-success" onclick="updateApptStatus(${a.id},'confirmed')" title="אשר"><i class="fas fa-check"></i></button>`:''}
+                  ${a.status==='confirmed'?`<button class="btn btn-sm btn-primary" onclick="updateApptStatus(${a.id},'completed')" title="הושלם"><i class="fas fa-check-double"></i></button>`:''}
+                  ${['pending','confirmed'].includes(a.status)?`<button class="btn btn-sm btn-danger" onclick="updateApptStatus(${a.id},'cancelled')" title="בטל"><i class="fas fa-times"></i></button>`:''}
+                </div>
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table>
+      `;
+    }
   } catch(e) { toast(e.message, 'error'); }
 }
 
@@ -425,17 +455,17 @@ async function viewAppointment(id) {
     const a = await api(`/appointments/${id}`);
     openModal('פרטי תור', `
       <div style="display:grid;gap:.75rem">
-        <div><strong>לקוח:</strong> ${a.client_name}</div>
-        <div><strong>טלפון:</strong> <a href="tel:${a.client_phone}">${a.client_phone}</a></div>
-        <div><strong>אימייל:</strong> ${a.client_email || '-'}</div>
-        <div><strong>ספר:</strong> ${a.barber_name}</div>
-        <div><strong>שירות:</strong> ${a.service_name}</div>
+        <div><strong>לקוח:</strong> ${escHtml(a.client_name)}</div>
+        <div><strong>טלפון:</strong> <a href="tel:${escAttr(a.client_phone)}">${escHtml(a.client_phone)}</a></div>
+        <div><strong>אימייל:</strong> ${escHtml(a.client_email || '-')}</div>
+        <div><strong>ספר:</strong> ${escHtml(a.barber_name)}</div>
+        <div><strong>שירות:</strong> ${escHtml(a.service_name)}</div>
         <div><strong>תאריך:</strong> ${formatDate(a.date)}</div>
         <div><strong>שעה:</strong> ${a.start_time} - ${a.end_time}</div>
         <div><strong>משך:</strong> ${a.duration} דקות</div>
         <div><strong>מחיר:</strong> ₪${a.price || 0}</div>
         <div><strong>סטטוס:</strong> <span class="badge badge-${a.status}">${STATUS_HE[a.status]}</span></div>
-        <div><strong>הערות:</strong> ${a.notes || '-'}</div>
+        <div><strong>הערות:</strong> ${escHtml(a.notes || '-')}</div>
       </div>
       <div class="modal-actions">
         ${a.status==='pending'?`<button class="btn btn-success" onclick="updateApptStatus(${a.id},'confirmed');closeModal()"><i class="fas fa-check"></i> אשר</button>`:''}
@@ -697,11 +727,11 @@ async function loadClients(search) {
 async function viewClient(id) {
   try {
     const c = await api(`/clients/${id}`);
-    openModal(`פרטי לקוח - ${c.name}`, `
+    openModal(`פרטי לקוח - ${escHtml(c.name)}`, `
       <div style="display:grid;gap:.5rem;margin-bottom:1rem">
-        <div><strong>טלפון:</strong> <a href="tel:${c.phone}">${c.phone}</a></div>
-        <div><strong>אימייל:</strong> ${c.email || '-'}</div>
-        <div><strong>הערות:</strong> ${c.notes || '-'}</div>
+        <div><strong>טלפון:</strong> <a href="tel:${escAttr(c.phone)}">${escHtml(c.phone)}</a></div>
+        <div><strong>אימייל:</strong> ${escHtml(c.email || '-')}</div>
+        <div><strong>הערות:</strong> ${escHtml(c.notes || '-')}</div>
         <div><strong>ביקורים:</strong> ${c.total_visits}</div>
         <div><strong>VIP:</strong> ${c.vip ? 'כן' : 'לא'}</div>
       </div>
@@ -711,7 +741,7 @@ async function viewClient(id) {
         <tbody>${c.history.length ? c.history.map(h => `
           <tr>
             <td>${formatDate(h.date)}</td><td>${h.start_time}</td>
-            <td>${h.barber_name}</td><td>${h.service_name}</td>
+            <td>${escHtml(h.barber_name)}</td><td>${escHtml(h.service_name)}</td>
             <td><span class="badge badge-${h.status}">${STATUS_HE[h.status]}</span></td>
           </tr>
         `).join('') : '<tr><td colspan="5">אין היסטוריה</td></tr>'}</tbody>
@@ -986,26 +1016,48 @@ async function renderServices() {
 
   try {
     const services = await api('/services');
-    document.getElementById('servicesList').innerHTML = `
-      <div class="table-container"><table>
-        <thead><tr><th>צבע</th><th>שם</th><th>תיאור</th><th>משך</th><th>מחיר</th><th>פעולות</th></tr></thead>
-        <tbody>${services.map(s => `
-          <tr>
-            <td><span class="color-dot" style="background:${s.color};width:14px;height:14px"></span></td>
-            <td><strong>${s.name}</strong></td>
-            <td>${s.description || '-'}</td>
-            <td>${s.duration} דק'</td>
-            <td>₪${s.price}</td>
-            <td>
-              ${App.user.role==='admin'?`<div class="btn-group">
-                <button class="btn btn-sm btn-outline" onclick="editService(${s.id})"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="deleteService(${s.id})"><i class="fas fa-trash"></i></button>
-              </div>`:''}
-            </td>
-          </tr>
-        `).join('')}</tbody>
-      </table></div>
-    `;
+    const isMobile = window.innerWidth <= 768;
+    const container = document.getElementById('servicesList');
+    if (isMobile) {
+      container.innerHTML = `<div class="cards-list">${services.map(s => `
+        <div class="info-card">
+          <div class="info-card-header">
+            <span class="color-dot" style="background:${s.color};width:14px;height:14px"></span>
+            <strong>${escHtml(s.name)}</strong>
+          </div>
+          <div class="info-card-body">
+            ${s.description ? `<div class="info-card-row">${escHtml(s.description)}</div>` : ''}
+            <div class="info-card-row"><span class="info-label">משך:</span> ${s.duration} דק'</div>
+            <div class="info-card-row"><span class="info-label">מחיר:</span> ₪${s.price}</div>
+          </div>
+          ${App.user.role==='admin'?`<div class="info-card-actions">
+            <button class="btn btn-sm btn-outline" onclick="editService(${s.id})"><i class="fas fa-edit"></i> עריכה</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteService(${s.id})"><i class="fas fa-trash"></i> מחיקה</button>
+          </div>`:''}
+        </div>
+      `).join('')}</div>`;
+    } else {
+      container.innerHTML = `
+        <div class="table-container"><table>
+          <thead><tr><th>צבע</th><th>שם</th><th>תיאור</th><th>משך</th><th>מחיר</th><th>פעולות</th></tr></thead>
+          <tbody>${services.map(s => `
+            <tr>
+              <td><span class="color-dot" style="background:${s.color};width:14px;height:14px"></span></td>
+              <td><strong>${escHtml(s.name)}</strong></td>
+              <td>${escHtml(s.description || '-')}</td>
+              <td>${s.duration} דק'</td>
+              <td>₪${s.price}</td>
+              <td>
+                ${App.user.role==='admin'?`<div class="btn-group">
+                  <button class="btn btn-sm btn-outline" onclick="editService(${s.id})"><i class="fas fa-edit"></i></button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteService(${s.id})"><i class="fas fa-trash"></i></button>
+                </div>`:''}
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table></div>
+      `;
+    }
   } catch(e) { toast(e.message, 'error'); }
 }
 

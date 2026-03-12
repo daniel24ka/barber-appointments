@@ -62,8 +62,11 @@ router.post('/', (req, res) => {
     const { name, phone, email, notes, vip } = req.body;
     if (!name) return res.status(400).json({ error: 'שם הלקוח הוא שדה חובה' });
 
+    // Normalize phone - strip dashes and spaces
+    const cleanPhone = phone ? phone.replace(/[-\s]/g, '') : '';
+
     const result = db.prepare('INSERT INTO clients (name, phone, email, notes, vip) VALUES (?, ?, ?, ?, ?)').run(
-      name, phone || '', email || '', notes || '', vip ? 1 : 0
+      name.trim(), cleanPhone, email || '', notes || '', vip ? 1 : 0
     );
 
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(result.lastInsertRowid);
@@ -83,10 +86,13 @@ router.put('/:id', (req, res) => {
     const existing = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'לקוח לא נמצא' });
 
+    // Normalize phone
+    const cleanPhone = phone !== undefined ? phone.replace(/[-\s]/g, '') : undefined;
+
     db.prepare(`
       UPDATE clients SET name = ?, phone = ?, email = ?, notes = ?, vip = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(name || existing.name, phone ?? existing.phone, email ?? existing.email, notes ?? existing.notes, vip !== undefined ? (vip ? 1 : 0) : existing.vip, req.params.id);
+    `).run(name || existing.name, cleanPhone ?? existing.phone, email ?? existing.email, notes ?? existing.notes, vip !== undefined ? (vip ? 1 : 0) : existing.vip, req.params.id);
 
     const updated = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
     res.json(updated);
