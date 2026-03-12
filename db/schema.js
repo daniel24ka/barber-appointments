@@ -279,14 +279,30 @@ async function initDatabase() {
   }
 
   // Ensure super admin exists
-  const superAdmin = await db.prepare("SELECT id FROM users WHERE role = 'super_admin' LIMIT 1").get();
-  if (!superAdmin) {
+  try {
+    const superAdmin = await db.prepare("SELECT id FROM users WHERE username = 'danitech' LIMIT 1").get();
     const hashedPassword = bcrypt.hashSync(process.env.SUPER_ADMIN_PASSWORD || 'danitech2024', 10);
-    await db.prepare("INSERT INTO users (tenant_id, username, password, role, display_name, email) VALUES (?, ?, ?, 'super_admin', ?, ?)").run(
-      1, 'danitech', hashedPassword, 'דניטק - מנהל ראשי', 'daniel@danitech.co.il'
-    );
-    console.log('Super admin created: danitech');
+    if (!superAdmin) {
+      await pool.query(`
+        INSERT INTO users (tenant_id, username, password, role, display_name, email, active)
+        VALUES (1, 'danitech', $1, 'super_admin', 'דניטק - מנהל ראשי', 'daniel@danitech.co.il', 1)
+        ON CONFLICT DO NOTHING
+      `, [hashedPassword]);
+      console.log('Super admin created: danitech');
+    } else {
+      // Update existing user to super_admin and reset password
+      await pool.query("UPDATE users SET role = 'super_admin', password = $1, active = 1 WHERE username = 'danitech'", [hashedPassword]);
+      console.log('Super admin updated: danitech');
+    }
+  } catch(e) {
+    console.error('Super admin creation error:', e.message);
   }
+
+  // Debug: log existing users
+  try {
+    const users = await pool.query("SELECT id, username, role, active, tenant_id FROM users");
+    console.log('Existing users:', JSON.stringify(users.rows));
+  } catch(e) {}
 
   console.log('Database initialized (PostgreSQL - Multi-tenant)');
   return db;
