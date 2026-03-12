@@ -86,20 +86,37 @@ async function showApp() {
     }
   }
 
-  // Super admin: add tenants management nav link
+  // Super admin: add tenants management nav link (desktop sidebar + mobile more menu)
   if (App.user.role === 'super_admin') {
+    // Desktop sidebar
     const sidebarNav = document.querySelector('.sidebar-nav');
-    if (sidebarNav && !document.querySelector('[data-page="tenants"]')) {
+    if (sidebarNav && !sidebarNav.querySelector('[data-page="tenants"]')) {
       const tenantsLink = document.createElement('a');
       tenantsLink.href = '#';
       tenantsLink.className = 'nav-item';
       tenantsLink.dataset.page = 'tenants';
       tenantsLink.innerHTML = '<i class="fas fa-building"></i><span>ניהול עסקים</span>';
       tenantsLink.addEventListener('click', (e) => { e.preventDefault(); navigate('tenants'); });
-      // Insert before settings
       const settingsNav = document.getElementById('settingsNav');
       if (settingsNav) sidebarNav.insertBefore(tenantsLink, settingsNav);
       else sidebarNav.appendChild(tenantsLink);
+    }
+    // Mobile more menu (bottom sheet)
+    const moreMenuSheet = document.querySelector('.more-menu-sheet');
+    if (moreMenuSheet && !moreMenuSheet.querySelector('[data-page="tenants"]')) {
+      const tenantsMoreLink = document.createElement('a');
+      tenantsMoreLink.href = '#';
+      tenantsMoreLink.className = 'more-menu-item';
+      tenantsMoreLink.dataset.page = 'tenants';
+      tenantsMoreLink.innerHTML = '<i class="fas fa-building"></i> ניהול עסקים';
+      tenantsMoreLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('moreMenu').classList.add('hidden');
+        navigate('tenants');
+      });
+      const settingsMoreNav = document.getElementById('settingsMoreNav');
+      if (settingsMoreNav) moreMenuSheet.insertBefore(tenantsMoreLink, settingsMoreNav);
+      else moreMenuSheet.appendChild(tenantsMoreLink);
     }
   }
 
