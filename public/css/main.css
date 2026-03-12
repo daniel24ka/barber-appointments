@@ -144,6 +144,15 @@ input, select, textarea { font-family: inherit; font-size: 0.95rem; }
 
 .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
+/* === Info Cards (mobile list view) === */
+.cards-list { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.5rem 0; }
+.info-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem; }
+.info-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 1rem; }
+.info-card-body { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.88rem; color: var(--text-secondary); }
+.info-card-row { display: flex; gap: 0.35rem; }
+.info-label { font-weight: 600; color: var(--text); white-space: nowrap; }
+.info-card-actions { display: flex; gap: 0.5rem; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--border); }
+
 /* === Table === */
 .table-container { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }

@@ -648,27 +648,49 @@ async function loadClients(search) {
 
     if (!clients.length) { container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><h3>לא נמצאו לקוחות</h3></div>'; return; }
 
-    container.innerHTML = `
-      <div class="table-container"><table>
-        <thead><tr><th>שם</th><th>טלפון</th><th>אימייל</th><th>ביקורים</th><th>ביקור אחרון</th><th>VIP</th><th>פעולות</th></tr></thead>
-        <tbody>${clients.map(c => `
-          <tr>
-            <td><strong>${c.name}</strong></td>
-            <td><a href="tel:${c.phone}">${c.phone}</a></td>
-            <td>${c.email || '-'}</td>
-            <td>${c.total_visits}</td>
-            <td>${c.last_visit ? formatDate(c.last_visit) : '-'}</td>
-            <td>${c.vip ? '<span class="badge badge-vip">VIP</span>' : '-'}</td>
-            <td>
-              <div class="btn-group">
-                <button class="btn btn-sm btn-outline" onclick="viewClient(${c.id})"><i class="fas fa-eye"></i></button>
-                <button class="btn btn-sm btn-outline" onclick="editClient(${c.id})"><i class="fas fa-edit"></i></button>
-              </div>
-            </td>
-          </tr>
-        `).join('')}</tbody>
-      </table></div>
-    `;
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      container.innerHTML = `<div class="cards-list">${clients.map(c => `
+        <div class="info-card">
+          <div class="info-card-header">
+            <strong>${c.name}</strong>
+            ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ''}
+          </div>
+          <div class="info-card-body">
+            <div class="info-card-row"><span class="info-label">טלפון:</span> <a href="tel:${c.phone}">${c.phone}</a></div>
+            ${c.email ? `<div class="info-card-row"><span class="info-label">אימייל:</span> ${c.email}</div>` : ''}
+            <div class="info-card-row"><span class="info-label">ביקורים:</span> ${c.total_visits}</div>
+            ${c.last_visit ? `<div class="info-card-row"><span class="info-label">ביקור אחרון:</span> ${formatDate(c.last_visit)}</div>` : ''}
+          </div>
+          <div class="info-card-actions">
+            <button class="btn btn-sm btn-outline" onclick="viewClient(${c.id})"><i class="fas fa-eye"></i> צפה</button>
+            <button class="btn btn-sm btn-outline" onclick="editClient(${c.id})"><i class="fas fa-edit"></i> עריכה</button>
+          </div>
+        </div>
+      `).join('')}</div>`;
+    } else {
+      container.innerHTML = `
+        <div class="table-container"><table>
+          <thead><tr><th>שם</th><th>טלפון</th><th>אימייל</th><th>ביקורים</th><th>ביקור אחרון</th><th>VIP</th><th>פעולות</th></tr></thead>
+          <tbody>${clients.map(c => `
+            <tr>
+              <td><strong>${c.name}</strong></td>
+              <td><a href="tel:${c.phone}">${c.phone}</a></td>
+              <td>${c.email || '-'}</td>
+              <td>${c.total_visits}</td>
+              <td>${c.last_visit ? formatDate(c.last_visit) : '-'}</td>
+              <td>${c.vip ? '<span class="badge badge-vip">VIP</span>' : '-'}</td>
+              <td>
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-outline" onclick="viewClient(${c.id})"><i class="fas fa-eye"></i></button>
+                  <button class="btn btn-sm btn-outline" onclick="editClient(${c.id})"><i class="fas fa-edit"></i></button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table></div>
+      `;
+    }
   } catch(e) { toast(e.message, 'error'); }
 }
 
@@ -779,25 +801,47 @@ async function renderBarbers() {
     const barbers = await api('/barbers');
     const container = document.getElementById('barbersList');
 
-    container.innerHTML = `<div class="table-container"><table>
-      <thead><tr><th>צבע</th><th>שם</th><th>טלפון</th><th>התמחות</th><th>שעות</th><th>ימי עבודה</th><th>פעולות</th></tr></thead>
-      <tbody>${barbers.map(b => `
-        <tr>
-          <td><span class="color-dot" style="background:${b.color};width:14px;height:14px"></span></td>
-          <td><strong>${b.name}</strong></td>
-          <td>${b.phone || '-'}</td>
-          <td>${b.specialty || '-'}</td>
-          <td>${b.work_start_time}-${b.work_end_time}</td>
-          <td>${b.work_days.split(',').map(d=>DAYS_HE[d]).join(', ')}</td>
-          <td>
-            <div class="btn-group">
-              <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i></button>
-              <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i></button>
-            </div>
-          </td>
-        </tr>
-      `).join('')}</tbody>
-    </table></div>`;
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      container.innerHTML = `<div class="cards-list">${barbers.map(b => `
+        <div class="info-card">
+          <div class="info-card-header">
+            <span class="color-dot" style="background:${b.color};width:14px;height:14px"></span>
+            <strong>${b.name}</strong>
+          </div>
+          <div class="info-card-body">
+            <div class="info-card-row"><span class="info-label">טלפון:</span> ${b.phone || '-'}</div>
+            <div class="info-card-row"><span class="info-label">התמחות:</span> ${b.specialty || '-'}</div>
+            <div class="info-card-row"><span class="info-label">שעות:</span> ${b.work_start_time}-${b.work_end_time}</div>
+            <div class="info-card-row"><span class="info-label">ימי עבודה:</span> ${b.work_days.split(',').map(d=>DAYS_HE[d]).join(', ')}</div>
+          </div>
+          <div class="info-card-actions">
+            <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i> עריכה</button>
+            <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i> ימי חופש</button>
+          </div>
+        </div>
+      `).join('')}</div>`;
+    } else {
+      container.innerHTML = `<div class="table-container"><table>
+        <thead><tr><th>צבע</th><th>שם</th><th>טלפון</th><th>התמחות</th><th>שעות</th><th>ימי עבודה</th><th>פעולות</th></tr></thead>
+        <tbody>${barbers.map(b => `
+          <tr>
+            <td><span class="color-dot" style="background:${b.color};width:14px;height:14px"></span></td>
+            <td><strong>${b.name}</strong></td>
+            <td>${b.phone || '-'}</td>
+            <td>${b.specialty || '-'}</td>
+            <td>${b.work_start_time}-${b.work_end_time}</td>
+            <td>${b.work_days.split(',').map(d=>DAYS_HE[d]).join(', ')}</td>
+            <td>
+              <div class="btn-group">
+                <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i></button>
+              </div>
+            </td>
+          </tr>
+        `).join('')}</tbody>
+      </table></div>`;
+    }
   } catch(e) { toast(e.message, 'error'); }
 }
 
