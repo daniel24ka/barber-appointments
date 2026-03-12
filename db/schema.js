@@ -1,131 +1,98 @@
-const initSqlJs = require('sql.js');
-const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'barber.db');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-let db = null;
-let rawDb = null;
-let SQL = null;
-let saveTimer = null;
-
-// Save database to file (debounced)
-function saveDb() {
-  if (!rawDb) return;
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      const dir = path.dirname(DB_PATH);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const data = rawDb.export();
-      fs.writeFileSync(DB_PATH, Buffer.from(data));
-    } catch (e) { console.error('DB save error:', e); }
-  }, 100);
+// Convert ? placeholders to $1, $2, etc.
+function convertPlaceholders(sql) {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
 }
 
-function saveDbSync() {
-  if (!rawDb) return;
-  try {
-    const dir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const data = rawDb.export();
-    fs.writeFileSync(DB_PATH, Buffer.from(data));
-  } catch (e) { console.error('DB save error:', e); }
+// Check if SQL is a plain INSERT (not ON CONFLICT / RETURNING)
+function isPlainInsert(sql) {
+  return /^\s*INSERT/i.test(sql) && !/ON\s+CONFLICT/i.test(sql) && !/RETURNING/i.test(sql);
 }
 
-// sql.js wrapper to mimic better-sqlite3 API
-function createWrapper(database) {
-  return {
-    prepare(sql) {
-      return {
-        run(...params) {
-          database.run(sql, params);
-          saveDb();
-          const lastId = database.exec("SELECT last_insert_rowid() as id")[0]?.values[0]?.[0] || 0;
-          const changes = database.getRowsModified();
-          return { lastInsertRowid: lastId, changes };
-        },
-        get(...params) {
-          const stmt = database.prepare(sql);
-          if (params.length) stmt.bind(params);
-          if (stmt.step()) {
-            const cols = stmt.getColumnNames();
-            const vals = stmt.get();
-            stmt.free();
-            const row = {};
-            cols.forEach((c, i) => { row[c] = vals[i]; });
-            return row;
-          }
-          stmt.free();
-          return undefined;
-        },
-        all(...params) {
-          const results = [];
-          const stmt = database.prepare(sql);
-          if (params.length) stmt.bind(params);
-          while (stmt.step()) {
-            const cols = stmt.getColumnNames();
-            const vals = stmt.get();
-            const row = {};
-            cols.forEach((c, i) => { row[c] = vals[i]; });
-            results.push(row);
-          }
-          stmt.free();
-          return results;
+// Database wrapper - mimics the old sync API but all methods are async
+const db = {
+  prepare(sql) {
+    const pgSql = convertPlaceholders(sql);
+    const addReturning = isPlainInsert(sql);
+
+    return {
+      async run(...params) {
+        let querySql = pgSql;
+        if (addReturning) {
+          querySql += ' RETURNING id';
         }
-      };
-    },
-    exec(sql) {
-      database.run(sql);
-      saveDb();
-    },
-    pragma(str) {
-      try { database.run(`PRAGMA ${str}`); } catch(e) {}
-    },
-    transaction(fn) {
-      return (...args) => {
-        database.run('BEGIN TRANSACTION');
-        try {
-          fn(...args);
-          database.run('COMMIT');
-          saveDb();
-        } catch(e) {
-          database.run('ROLLBACK');
-          throw e;
-        }
-      };
-    }
-  };
-}
+        const result = await pool.query(querySql, params);
+        return {
+          lastInsertRowid: result.rows[0]?.id || 0,
+          changes: result.rowCount
+        };
+      },
+      async get(...params) {
+        const result = await pool.query(pgSql, params);
+        return result.rows[0] || undefined;
+      },
+      async all(...params) {
+        const result = await pool.query(pgSql, params);
+        return result.rows;
+      }
+    };
+  },
+  async query(sql, params = []) {
+    const result = await pool.query(sql, params);
+    return result;
+  },
+  transaction(fn) {
+    return async (...args) => {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const txDb = {
+          prepare(sql) {
+            const pgSql = convertPlaceholders(sql);
+            return {
+              async run(...params) {
+                const result = await client.query(pgSql, params);
+                return { lastInsertRowid: result.rows[0]?.id || 0, changes: result.rowCount };
+              },
+              async get(...params) {
+                const result = await client.query(pgSql, params);
+                return result.rows[0] || undefined;
+              },
+              async all(...params) {
+                const result = await client.query(pgSql, params);
+                return result.rows;
+              }
+            };
+          }
+        };
+        await fn(txDb, ...args);
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+    };
+  }
+};
 
 function getDb() {
-  if (!db) throw new Error('Database not initialized. Call initDatabase() first.');
   return db;
 }
 
 async function initDatabase() {
-  SQL = await initSqlJs();
-
-  // Load existing DB or create new
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
-    rawDb = new SQL.Database(buffer);
-  } else {
-    rawDb = new SQL.Database();
-  }
-
-  rawDb.run("PRAGMA foreign_keys = ON");
-
-  db = createWrapper(rawDb);
-
-  // Create tables
-  rawDb.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'barber' CHECK(role IN ('admin','barber','client')),
@@ -133,13 +100,13 @@ async function initDatabase() {
       email TEXT,
       phone TEXT,
       active INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  rawDb.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS barbers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id INTEGER UNIQUE,
       name TEXT NOT NULL,
       phone TEXT,
@@ -152,28 +119,28 @@ async function initDatabase() {
       color TEXT DEFAULT '#4F46E5',
       active INTEGER DEFAULT 1,
       notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
-  rawDb.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS clients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       phone TEXT,
       email TEXT,
       notes TEXT,
       vip INTEGER DEFAULT 0,
       total_visits INTEGER DEFAULT 0,
-      last_visit DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      last_visit TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  rawDb.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS services (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT,
       duration INTEGER NOT NULL DEFAULT 30,
@@ -181,12 +148,12 @@ async function initDatabase() {
       color TEXT DEFAULT '#10B981',
       active INTEGER DEFAULT 1,
       sort_order INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  rawDb.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS appointments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       client_id INTEGER NOT NULL,
       barber_id INTEGER NOT NULL,
       service_id INTEGER NOT NULL,
@@ -198,16 +165,16 @@ async function initDatabase() {
       notes TEXT,
       reminder_sent INTEGER DEFAULT 0,
       price REAL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (client_id) REFERENCES clients(id),
       FOREIGN KEY (barber_id) REFERENCES barbers(id),
       FOREIGN KEY (service_id) REFERENCES services(id)
     )
   `);
-  rawDb.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS days_off (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       barber_id INTEGER NOT NULL,
       date TEXT NOT NULL,
       reason TEXT,
@@ -215,7 +182,7 @@ async function initDatabase() {
       UNIQUE(barber_id, date)
     )
   `);
-  rawDb.run(`
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT
@@ -223,43 +190,47 @@ async function initDatabase() {
   `);
 
   // Indexes
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_appointments_barber ON appointments(barber_id, date)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_appointments_client ON appointments(client_id)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_clients_phone ON clients(phone)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_clients_name ON clients(name)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_services_active ON services(active, sort_order)"); } catch(e) {}
-  try { rawDb.run("CREATE INDEX IF NOT EXISTS idx_days_off_barber_date ON days_off(barber_id, date)"); } catch(e) {}
-
-  // Seed if empty
-  const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get();
-  if (userCount.c === 0) {
-    seedData(db);
-    saveDbSync();
+  const indexes = [
+    "CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date)",
+    "CREATE INDEX IF NOT EXISTS idx_appointments_barber ON appointments(barber_id, date)",
+    "CREATE INDEX IF NOT EXISTS idx_appointments_client ON appointments(client_id)",
+    "CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status)",
+    "CREATE INDEX IF NOT EXISTS idx_clients_phone ON clients(phone)",
+    "CREATE INDEX IF NOT EXISTS idx_clients_name ON clients(name)",
+    "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+    "CREATE INDEX IF NOT EXISTS idx_services_active ON services(active, sort_order)",
+    "CREATE INDEX IF NOT EXISTS idx_days_off_barber_date ON days_off(barber_id, date)"
+  ];
+  for (const idx of indexes) {
+    try { await pool.query(idx); } catch(e) {}
   }
 
-  console.log('Database initialized at', DB_PATH);
+  // Seed if empty
+  const userCount = await db.prepare('SELECT COUNT(*) as c FROM users').get();
+  if (parseInt(userCount.c) === 0) {
+    await seedData();
+  }
+
+  console.log('Database initialized (PostgreSQL)');
   return db;
 }
 
-function seedData(db) {
+async function seedData() {
   const hashedPassword = bcrypt.hashSync('admin123', 10);
 
   // Admin user
-  db.prepare("INSERT INTO users (username, password, role, display_name, email) VALUES (?, ?, 'admin', ?, ?)").run(
+  await db.prepare("INSERT INTO users (username, password, role, display_name, email) VALUES (?, ?, 'admin', ?, ?)").run(
     'admin', hashedPassword, 'מנהל המערכת', 'admin@barber.co.il'
   );
 
   // Barbers
-  const b1 = db.prepare("INSERT INTO users (username, password, role, display_name) VALUES (?, ?, 'barber', ?)").run('yossi', hashedPassword, 'יוסי');
-  const b2 = db.prepare("INSERT INTO users (username, password, role, display_name) VALUES (?, ?, 'barber', ?)").run('david', hashedPassword, 'דוד');
-  const b3 = db.prepare("INSERT INTO users (username, password, role, display_name) VALUES (?, ?, 'barber', ?)").run('moshe', hashedPassword, 'משה');
+  const b1 = await db.prepare("INSERT INTO users (username, password, role, display_name) VALUES (?, ?, 'barber', ?)").run('yossi', hashedPassword, 'יוסי');
+  const b2 = await db.prepare("INSERT INTO users (username, password, role, display_name) VALUES (?, ?, 'barber', ?)").run('david', hashedPassword, 'דוד');
+  const b3 = await db.prepare("INSERT INTO users (username, password, role, display_name) VALUES (?, ?, 'barber', ?)").run('moshe', hashedPassword, 'משה');
 
-  db.prepare("INSERT INTO barbers (user_id, name, phone, specialty, color, work_days) VALUES (?, ?, ?, ?, ?, ?)").run(b1.lastInsertRowid, 'יוסי כהן', '050-1234567', 'תספורות גברים', '#4F46E5', '0,1,2,3,4');
-  db.prepare("INSERT INTO barbers (user_id, name, phone, specialty, color, work_days) VALUES (?, ?, ?, ?, ?, ?)").run(b2.lastInsertRowid, 'דוד לוי', '050-7654321', 'עיצוב זקן', '#EF4444', '0,1,2,3,4,5');
-  db.prepare("INSERT INTO barbers (user_id, name, phone, specialty, color, work_days) VALUES (?, ?, ?, ?, ?, ?)").run(b3.lastInsertRowid, 'משה ישראלי', '050-9876543', 'צבע שיער', '#F59E0B', '0,1,2,4');
+  await db.prepare("INSERT INTO barbers (user_id, name, phone, specialty, color, work_days) VALUES (?, ?, ?, ?, ?, ?)").run(b1.lastInsertRowid, 'יוסי כהן', '050-1234567', 'תספורות גברים', '#4F46E5', '0,1,2,3,4');
+  await db.prepare("INSERT INTO barbers (user_id, name, phone, specialty, color, work_days) VALUES (?, ?, ?, ?, ?, ?)").run(b2.lastInsertRowid, 'דוד לוי', '050-7654321', 'עיצוב זקן', '#EF4444', '0,1,2,3,4,5');
+  await db.prepare("INSERT INTO barbers (user_id, name, phone, specialty, color, work_days) VALUES (?, ?, ?, ?, ?, ?)").run(b3.lastInsertRowid, 'משה ישראלי', '050-9876543', 'צבע שיער', '#F59E0B', '0,1,2,4');
 
   // Services
   const services = [
@@ -273,7 +244,7 @@ function seedData(db) {
     ['חבילת חתן', 'תספורת + זקן + טיפול פנים', 90, 200, '#D97706', 8],
   ];
   for (const s of services) {
-    db.prepare('INSERT INTO services (name, description, duration, price, color, sort_order) VALUES (?,?,?,?,?,?)').run(...s);
+    await db.prepare('INSERT INTO services (name, description, duration, price, color, sort_order) VALUES (?,?,?,?,?,?)').run(...s);
   }
 
   // Settings
@@ -287,12 +258,12 @@ function seedData(db) {
     ['allow_self_booking', 'false'],
   ];
   for (const s of settings) {
-    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?,?)').run(...s);
+    await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', s);
   }
 }
 
-// Graceful shutdown - save DB before exit
-process.on('SIGTERM', () => { saveDbSync(); process.exit(0); });
-process.on('SIGINT', () => { saveDbSync(); process.exit(0); });
+// Graceful shutdown
+process.on('SIGTERM', async () => { await pool.end(); process.exit(0); });
+process.on('SIGINT', async () => { await pool.end(); process.exit(0); });
 
 module.exports = { getDb, initDatabase };

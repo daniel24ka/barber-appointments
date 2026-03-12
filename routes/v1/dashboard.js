@@ -6,26 +6,26 @@ const { authenticateToken } = require('../../middleware/auth');
 router.use(authenticateToken);
 
 // Dashboard stats
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const db = getDb();
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
-    const todayAppts = db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(today).c;
-    const pendingAppts = db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status = 'pending'").get(today).c;
-    const totalClients = db.prepare('SELECT COUNT(*) as c FROM clients').get().c;
-    const totalBarbers = db.prepare('SELECT COUNT(*) as c FROM barbers WHERE active = 1').get().c;
+    const todayAppts = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(today)).c;
+    const pendingAppts = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status = 'pending'").get(today)).c;
+    const totalClients = (await db.prepare('SELECT COUNT(*) as c FROM clients').get()).c;
+    const totalBarbers = (await db.prepare('SELECT COUNT(*) as c FROM barbers WHERE active = 1').get()).c;
 
     // Revenue today
-    const todayRevenue = db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date = ? AND status = 'completed'").get(today).total;
+    const todayRevenue = (await db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date = ? AND status = 'completed'").get(today)).total;
 
     // Revenue this month
     const monthStart = today.substring(0, 7) + '-01';
-    const monthRevenue = db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date >= ? AND status = 'completed'").get(monthStart).total;
+    const monthRevenue = (await db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date >= ? AND status = 'completed'").get(monthStart)).total;
 
-    // Upcoming appointments (next 5)
-    const upcoming = db.prepare(`
+    // Upcoming appointments (next 10)
+    const upcoming = await db.prepare(`
       SELECT a.*, c.name as client_name, c.phone as client_phone,
              b.name as barber_name, s.name as service_name
       FROM appointments a
@@ -38,7 +38,7 @@ router.get('/stats', (req, res) => {
     `).all(today);
 
     // Reminders: pending appointments for today not confirmed
-    const reminders = db.prepare(`
+    const reminders = await db.prepare(`
       SELECT a.*, c.name as client_name, c.phone as client_phone, b.name as barber_name
       FROM appointments a
       JOIN clients c ON a.client_id = c.id
@@ -53,7 +53,7 @@ router.get('/stats', (req, res) => {
       const d = new Date();
       d.setDate(d.getDate() - d.getDay() + i);
       const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      const count = db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(ds).c;
+      const count = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(ds)).c;
       weekDays.push({ date: ds, day: d.getDay(), count });
     }
 

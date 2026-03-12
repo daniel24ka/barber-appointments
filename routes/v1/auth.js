@@ -5,7 +5,7 @@ const { getDb } = require('../../db/schema');
 const { generateToken, authenticateToken } = require('../../middleware/auth');
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -13,7 +13,7 @@ router.post('/login', (req, res) => {
     }
 
     const db = getDb();
-    const user = db.prepare('SELECT * FROM users WHERE username = ? AND active = 1').get(username);
+    const user = await db.prepare('SELECT * FROM users WHERE username = ? AND active = 1').get(username);
 
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
@@ -36,18 +36,18 @@ router.get('/me', authenticateToken, (req, res) => {
 });
 
 // Change password
-router.post('/change-password', authenticateToken, (req, res) => {
+router.post('/change-password', authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const db = getDb();
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
 
     if (!bcrypt.compareSync(currentPassword, user.password)) {
       return res.status(400).json({ error: 'סיסמה נוכחית שגויה' });
     }
 
     const hashed = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashed, req.user.id);
+    await db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashed, req.user.id);
     res.json({ message: 'הסיסמה שונתה בהצלחה' });
   } catch (err) {
     console.error('Change password error:', err);

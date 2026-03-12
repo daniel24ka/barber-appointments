@@ -6,7 +6,7 @@ const { authenticateToken, requireRole } = require('../../middleware/auth');
 router.use(authenticateToken);
 
 // Check availability (must be before /:id)
-router.get('/check/availability', (req, res) => {
+router.get('/check/availability', async (req, res) => {
   try {
     const db = getDb();
     const { barber_id, date, start_time, end_time, exclude_id } = req.query;
@@ -15,12 +15,10 @@ router.get('/check/availability', (req, res) => {
       return res.status(400).json({ error: 'חסרים פרמטרים' });
     }
 
-    // Check day off
-    const dayOff = db.prepare('SELECT id FROM days_off WHERE barber_id = ? AND date = ?').get(barber_id, date);
+    const dayOff = await db.prepare('SELECT id FROM days_off WHERE barber_id = ? AND date = ?').get(barber_id, date);
     if (dayOff) return res.json({ available: false, reason: 'הספר ביום חופש' });
 
-    // Check barber work days
-    const barber = db.prepare('SELECT work_days, work_start_time, work_end_time FROM barbers WHERE id = ?').get(barber_id);
+    const barber = await db.prepare('SELECT work_days, work_start_time, work_end_time FROM barbers WHERE id = ?').get(barber_id);
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
@@ -33,7 +31,6 @@ router.get('/check/availability', (req, res) => {
       return res.json({ available: false, reason: 'מחוץ לשעות העבודה' });
     }
 
-    // Check conflicts
     let conflictSql = `
       SELECT id FROM appointments
       WHERE barber_id = ? AND date = ? AND status NOT IN ('cancelled')
@@ -46,7 +43,7 @@ router.get('/check/availability', (req, res) => {
       conflictParams.push(exclude_id);
     }
 
-    const conflict = db.prepare(conflictSql).get(...conflictParams);
+    const conflict = await db.prepare(conflictSql).get(...conflictParams);
     if (conflict) return res.json({ available: false, reason: 'כבר קיים תור בשעה זו' });
 
     res.json({ available: true });
@@ -57,17 +54,16 @@ router.get('/check/availability', (req, res) => {
 });
 
 // Get available slots for a barber on a date (must be before /:id)
-router.get('/slots/:barber_id/:date', (req, res) => {
+router.get('/slots/:barber_id/:date', async (req, res) => {
   try {
     const db = getDb();
     const { barber_id, date } = req.params;
     const { service_id } = req.query;
 
-    const barber = db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1').get(barber_id);
+    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1').get(barber_id);
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
-    // Check day off
-    const dayOff = db.prepare('SELECT id FROM days_off WHERE barber_id = ? AND date = ?').get(barber_id, date);
+    const dayOff = await db.prepare('SELECT id FROM days_off WHERE barber_id = ? AND date = ?').get(barber_id, date);
     if (dayOff) return res.json({ slots: [], reason: 'יום חופש' });
 
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
@@ -76,24 +72,22 @@ router.get('/slots/:barber_id/:date', (req, res) => {
 
     let duration = barber.slot_duration;
     if (service_id) {
-      const service = db.prepare('SELECT duration FROM services WHERE id = ?').get(service_id);
+      const service = await db.prepare('SELECT duration FROM services WHERE id = ?').get(service_id);
       if (service) duration = service.duration;
     }
 
-    // Get existing appointments
-    const existing = db.prepare(`
+    const existing = await db.prepare(`
       SELECT start_time, end_time FROM appointments
       WHERE barber_id = ? AND date = ? AND status NOT IN ('cancelled')
       ORDER BY start_time
     `).all(barber_id, date);
 
-    // Generate slots
     const slots = [];
     const [startH, startM] = barber.work_start_time.split(':').map(Number);
     const [endH, endM] = barber.work_end_time.split(':').map(Number);
     let currentMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
-    const interval = parseInt(db.prepare("SELECT value FROM settings WHERE key = 'slot_interval'").get()?.value || '15');
+    const interval = parseInt((await db.prepare("SELECT value FROM settings WHERE key = 'slot_interval'").get())?.value || '15');
 
     while (currentMinutes + duration <= endMinutes) {
       const slotStart = `${String(Math.floor(currentMinutes / 60)).padStart(2, '0')}:${String(currentMinutes % 60).padStart(2, '0')}`;
@@ -116,7 +110,7 @@ router.get('/slots/:barber_id/:date', (req, res) => {
 });
 
 // Get appointments with filters
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const db = getDb();
     const { date, barber_id, status, start_date, end_date, client_id } = req.query;
@@ -132,17 +126,18 @@ router.get('/', (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+    let pi = 0;
 
-    if (date) { sql += ' AND a.date = ?'; params.push(date); }
-    if (barber_id) { sql += ' AND a.barber_id = ?'; params.push(barber_id); }
-    if (status) { sql += ' AND a.status = ?'; params.push(status); }
-    if (client_id) { sql += ' AND a.client_id = ?'; params.push(client_id); }
-    if (start_date && end_date) { sql += ' AND a.date BETWEEN ? AND ?'; params.push(start_date, end_date); }
+    if (date) { pi++; sql += ` AND a.date = $${pi}`; params.push(date); }
+    if (barber_id) { pi++; sql += ` AND a.barber_id = $${pi}`; params.push(barber_id); }
+    if (status) { pi++; sql += ` AND a.status = $${pi}`; params.push(status); }
+    if (client_id) { pi++; sql += ` AND a.client_id = $${pi}`; params.push(client_id); }
+    if (start_date && end_date) { pi++; sql += ` AND a.date >= $${pi}`; params.push(start_date); pi++; sql += ` AND a.date <= $${pi}`; params.push(end_date); }
 
     sql += ' ORDER BY a.date ASC, a.start_time ASC';
 
-    const appointments = db.prepare(sql).all(...params);
-    res.json(appointments);
+    const result = await db.query(sql, params);
+    res.json(result.rows);
   } catch (err) {
     console.error('Get appointments error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת תורים' });
@@ -150,10 +145,10 @@ router.get('/', (req, res) => {
 });
 
 // Get single appointment
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const db = getDb();
-    const appt = db.prepare(`
+    const appt = await db.prepare(`
       SELECT a.*, c.name as client_name, c.phone as client_phone, c.email as client_email,
              b.name as barber_name, s.name as service_name
       FROM appointments a
@@ -172,7 +167,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create appointment
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const db = getDb();
     const { client_id, barber_id, service_id, date, start_time, notes } = req.body;
@@ -181,7 +176,7 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'חסרים שדות חובה' });
     }
 
-    const service = db.prepare('SELECT * FROM services WHERE id = ?').get(service_id);
+    const service = await db.prepare('SELECT * FROM services WHERE id = ?').get(service_id);
     if (!service) return res.status(404).json({ error: 'שירות לא נמצא' });
 
     const duration = service.duration;
@@ -189,8 +184,7 @@ router.post('/', (req, res) => {
     const endMinutes = h * 60 + m + duration;
     const end_time = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
 
-    // Check for conflicts
-    const conflict = db.prepare(`
+    const conflict = await db.prepare(`
       SELECT id FROM appointments
       WHERE barber_id = ? AND date = ? AND status NOT IN ('cancelled')
       AND start_time < ? AND end_time > ?
@@ -200,12 +194,12 @@ router.post('/', (req, res) => {
       return res.status(409).json({ error: 'כבר קיים תור בשעה זו' });
     }
 
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO appointments (client_id, barber_id, service_id, date, start_time, end_time, duration, status, notes, price)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
     `).run(client_id, barber_id, service_id, date, start_time, end_time, duration, notes || '', service.price);
 
-    const newAppt = db.prepare(`
+    const newAppt = await db.prepare(`
       SELECT a.*, c.name as client_name, b.name as barber_name, s.name as service_name
       FROM appointments a
       JOIN clients c ON a.client_id = c.id
@@ -222,12 +216,12 @@ router.post('/', (req, res) => {
 });
 
 // Update appointment
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const db = getDb();
     const { client_id, barber_id, service_id, date, start_time, status, notes } = req.body;
 
-    const existing = db.prepare('SELECT * FROM appointments WHERE id = ?').get(req.params.id);
+    const existing = await db.prepare('SELECT * FROM appointments WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'תור לא נמצא' });
 
     const updates = {};
@@ -240,7 +234,7 @@ router.put('/:id', (req, res) => {
 
     if (start_time !== undefined || service_id !== undefined) {
       const sid = service_id || existing.service_id;
-      const service = db.prepare('SELECT * FROM services WHERE id = ?').get(sid);
+      const service = await db.prepare('SELECT * FROM services WHERE id = ?').get(sid);
       const st = start_time || existing.start_time;
       const [h, m] = st.split(':').map(Number);
       const endMin = h * 60 + m + service.duration;
@@ -250,17 +244,21 @@ router.put('/:id', (req, res) => {
       updates.price = service.price;
     }
 
-    const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const keys = Object.keys(updates);
     const values = Object.values(updates);
+    const setClauses = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
 
-    db.prepare(`UPDATE appointments SET ${setClauses}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values, req.params.id);
+    await db.query(
+      `UPDATE appointments SET ${setClauses}, updated_at = CURRENT_TIMESTAMP WHERE id = $${keys.length + 1}`,
+      [...values, req.params.id]
+    );
 
     // Update client visits if completed
     if (status === 'completed') {
-      db.prepare('UPDATE clients SET total_visits = total_visits + 1, last_visit = CURRENT_TIMESTAMP WHERE id = ?').run(existing.client_id);
+      await db.prepare('UPDATE clients SET total_visits = total_visits + 1, last_visit = CURRENT_TIMESTAMP WHERE id = ?').run(existing.client_id);
     }
 
-    const updated = db.prepare(`
+    const updated = await db.prepare(`
       SELECT a.*, c.name as client_name, b.name as barber_name, s.name as service_name
       FROM appointments a JOIN clients c ON a.client_id = c.id
       JOIN barbers b ON a.barber_id = b.id JOIN services s ON a.service_id = s.id
@@ -275,10 +273,10 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete appointment
-router.delete('/:id', requireRole('admin'), (req, res) => {
+router.delete('/:id', requireRole('admin'), async (req, res) => {
   try {
     const db = getDb();
-    const result = db.prepare('DELETE FROM appointments WHERE id = ?').run(req.params.id);
+    const result = await db.prepare('DELETE FROM appointments WHERE id = ?').run(req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: 'תור לא נמצא' });
     res.json({ message: 'התור נמחק בהצלחה' });
   } catch (err) {
