@@ -14,7 +14,7 @@ async function api(endpoint, options = {}) {
   if (App.token) headers['Authorization'] = `Bearer ${App.token}`;
   const res = await fetch(`/api${endpoint}`, { ...options, headers });
   const data = await res.json();
-  if (res.status === 401 || res.status === 403) { logout(); throw new Error('Unauthorized'); }
+  if (res.status === 401 || res.status === 403) { sessionExpired(); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(data.error || 'שגיאה');
   return data;
 }
@@ -63,6 +63,10 @@ function logout() {
   localStorage.removeItem('barber_token'); localStorage.removeItem('barber_user');
   document.getElementById('loginPage').classList.remove('hidden');
   document.getElementById('appContainer').classList.add('hidden');
+}
+function sessionExpired() {
+  logout();
+  toast('פג תוקף ההתחברות, אנא התחבר מחדש', 'warning');
 }
 
 async function showApp() {

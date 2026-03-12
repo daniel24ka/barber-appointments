@@ -8,6 +8,7 @@ const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 const { initDatabase } = require('./db/schema');
+const { initJwtSecret } = require('./middleware/auth');
 const { resolveTenantBySlug } = require('./middleware/tenant');
 const { processReminders } = require('./services/reminders');
 
@@ -152,7 +153,7 @@ function validateEnv() {
     process.exit(1);
   }
   if (!process.env.JWT_SECRET) {
-    console.warn('WARNING: JWT_SECRET not set. Using random key (tokens will reset on restart).');
+    console.log('JWT_SECRET not set in environment - will use persistent key from database.');
   }
 }
 
@@ -164,7 +165,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Init
 validateEnv();
-initDatabase().then(() => {
+initDatabase().then(() => initJwtSecret()).then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`DaniTech Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

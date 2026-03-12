@@ -237,6 +237,16 @@ async function initDatabase() {
     )
   `);
 
+  // System config table (stores JWT_SECRET etc. so they persist across deploys)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS system_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // === Migration: add tenant_id to existing tables if missing ===
   await migrateMultiTenant();
 
@@ -444,8 +454,40 @@ async function createTenant({ slug, name, ownerName, ownerEmail, ownerPhone, adm
   }
 }
 
+// Get or create a persistent JWT_SECRET in the database
+async function getOrCreateJwtSecret() {
+  // If set in environment, always use that
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+
+  try {
+    // Try to get existing secret from DB
+    const row = await pool.query("SELECT value FROM system_config WHERE key = 'jwt_secret'");
+    if (row.rows[0]) {
+      console.log('JWT_SECRET loaded from database (persistent)');
+      return row.rows[0].value;
+    }
+
+    // Generate and store a new one
+    const crypto = require('crypto');
+    const newSecret = crypto.randomBytes(64).toString('hex');
+    await pool.query(
+      "INSERT INTO system_config (key, value) VALUES ('jwt_secret', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = CURRENT_TIMESTAMP",
+      [newSecret]
+    );
+    console.log('JWT_SECRET generated and stored in database (will persist across deploys)');
+    return newSecret;
+  } catch(e) {
+    console.error('Failed to get/create JWT_SECRET from DB:', e.message);
+    // Fallback to random (will reset on restart, but at least won't crash)
+    const crypto = require('crypto');
+    return crypto.randomBytes(32).toString('hex');
+  }
+}
+
 // Graceful shutdown
 process.on('SIGTERM', async () => { await pool.end(); process.exit(0); });
 process.on('SIGINT', async () => { await pool.end(); process.exit(0); });
 
-module.exports = { getDb, initDatabase, createTenant };
+module.exports = { getDb, initDatabase, createTenant, getOrCreateJwtSecret };

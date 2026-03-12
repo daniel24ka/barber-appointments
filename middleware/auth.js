@@ -1,7 +1,23 @@
 const jwt = require('jsonwebtoken');
 
-const crypto = require('crypto');
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+// JWT_SECRET is loaded asynchronously from the database on startup
+// to ensure it persists across Railway deploys
+let JWT_SECRET = null;
+
+async function initJwtSecret() {
+  const { getOrCreateJwtSecret } = require('../db/schema');
+  JWT_SECRET = await getOrCreateJwtSecret();
+}
+
+function getSecret() {
+  if (!JWT_SECRET) {
+    // Fallback: should not happen after init, but just in case
+    const crypto = require('crypto');
+    JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+    console.warn('WARNING: JWT_SECRET used before initialization');
+  }
+  return JWT_SECRET;
+}
 
 function generateToken(user) {
   return jwt.sign(
@@ -12,7 +28,7 @@ function generateToken(user) {
       display_name: user.display_name,
       tenant_id: user.tenant_id || null
     },
-    JWT_SECRET,
+    getSecret(),
     { expiresIn: '24h' }
   );
 }
@@ -26,7 +42,7 @@ function authenticateToken(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, getSecret());
     req.user = decoded;
     // Set tenantId for convenience (super_admin may not have one)
     if (decoded.tenant_id) {
@@ -54,4 +70,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { generateToken, authenticateToken, requireRole, JWT_SECRET };
+module.exports = { generateToken, authenticateToken, requireRole, initJwtSecret };

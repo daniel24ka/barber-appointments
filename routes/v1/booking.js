@@ -5,6 +5,14 @@ const { sendBookingConfirmation } = require('../../services/email');
 
 // All booking routes expect req.tenantId to be set by the tenant middleware in server.js
 
+// Helper: get current time in Israel timezone
+function getIsraelNow() {
+  const now = new Date();
+  // Convert to Israel time string and parse it
+  const israelStr = now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' });
+  return new Date(israelStr);
+}
+
 // Get active barbers (public)
 router.get('/barbers', async (req, res) => {
   try {
@@ -36,11 +44,14 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
     const tid = req.tenantId;
     const { barber_id, date } = req.params;
 
+    // Use Israel timezone for all date/time comparisons
+    const israelNow = getIsraelNow();
+
     // Validate date is not in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayIsrael = new Date(israelNow);
+    todayIsrael.setHours(0, 0, 0, 0);
     const requestedDate = new Date(date + 'T00:00:00');
-    if (requestedDate < today) {
+    if (requestedDate < todayIsrael) {
       return res.json({ slots: [], reason: 'לא ניתן להזמין תור בתאריך שעבר' });
     }
 
@@ -52,7 +63,7 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
     if (dayOff) return res.json({ slots: [], reason: 'הספר ביום חופש' });
 
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
-    const workDays = barber.work_days.split(',').map(Number);
+    const workDays = barber.work_days ? barber.work_days.split(',').map(Number) : [0,1,2,3,4];
     if (!workDays.includes(dayOfWeek)) return res.json({ slots: [], reason: 'הספר לא עובד ביום זה' });
 
     // Get service duration
@@ -64,7 +75,11 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
     if (!service) {
       service = await db.prepare("SELECT * FROM services WHERE active = 1 AND tenant_id = ? ORDER BY sort_order ASC LIMIT 1").get(tid);
     }
-    const slotDuration = service ? service.duration : 30;
+    if (!service) {
+      console.warn(`[Booking] No active services found for tenant ${tid}`);
+      return res.json({ slots: [], reason: 'לא הוגדרו שירותים במספרה. אנא פנה לבעל העסק.' });
+    }
+    const slotDuration = service.duration;
 
     // Get existing appointments
     const existing = await db.prepare(`
@@ -74,15 +89,17 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
     `).all(barber_id, date, tid);
 
     // Generate slots based on service duration
-    const [startH, startM] = barber.work_start_time.split(':').map(Number);
-    const [endH, endM] = barber.work_end_time.split(':').map(Number);
+    const workStart = barber.work_start_time || '09:00';
+    const workEnd = barber.work_end_time || '18:00';
+    const [startH, startM] = workStart.split(':').map(Number);
+    const [endH, endM] = workEnd.split(':').map(Number);
     let currentMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
-    const interval = parseInt((await db.prepare("SELECT value FROM settings WHERE key = 'slot_interval' AND tenant_id = ?").get(tid))?.value || '15');
+    const intervalRow = await db.prepare("SELECT value FROM settings WHERE key = 'slot_interval' AND tenant_id = ?").get(tid);
+    const interval = parseInt(intervalRow?.value || '15');
 
-    // If today, skip past slots
-    const now = new Date();
-    const isToday = requestedDate.toDateString() === now.toDateString();
+    // If today (Israel time), skip past slots
+    const isToday = requestedDate.toDateString() === todayIsrael.toDateString();
 
     const slots = [];
     while (currentMinutes + slotDuration <= endMinutes) {
@@ -90,9 +107,9 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
       const slotEndMin = currentMinutes + slotDuration;
       const slotEnd = `${String(Math.floor(slotEndMin / 60)).padStart(2, '0')}:${String(slotEndMin % 60).padStart(2, '0')}`;
 
-      // Skip past times if today
+      // Skip past times if today - use Israel time!
       if (isToday) {
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const nowMinutes = israelNow.getHours() * 60 + israelNow.getMinutes();
         if (currentMinutes <= nowMinutes) {
           currentMinutes += interval;
           continue;
@@ -108,6 +125,7 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
       currentMinutes += interval;
     }
 
+    console.log(`[Booking] Slots for barber ${barber_id}, date ${date}, tenant ${tid}: ${slots.length} available (service: ${service.name}, ${slotDuration}min, interval: ${interval}min, work: ${workStart}-${workEnd}, isToday: ${isToday})`);
     res.json({ slots });
   } catch (err) {
     console.error('Get public slots error:', err);
@@ -132,11 +150,12 @@ router.post('/book', async (req, res) => {
       return res.status(400).json({ error: 'מספר טלפון לא תקין' });
     }
 
-    // Validate date not in past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Validate date not in past (Israel time)
+    const israelNow = getIsraelNow();
+    const todayIsrael = new Date(israelNow);
+    todayIsrael.setHours(0, 0, 0, 0);
     const requestedDate = new Date(date + 'T00:00:00');
-    if (requestedDate < today) {
+    if (requestedDate < todayIsrael) {
       return res.status(400).json({ error: 'לא ניתן להזמין תור בתאריך שעבר' });
     }
 
