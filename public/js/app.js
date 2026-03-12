@@ -695,6 +695,7 @@ async function loadClients(search) {
           <div class="info-card-actions">
             <button class="btn btn-sm btn-outline" onclick="viewClient(${c.id})"><i class="fas fa-eye"></i> צפה</button>
             <button class="btn btn-sm btn-outline" onclick="editClient(${c.id})"><i class="fas fa-edit"></i> עריכה</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteClient(${c.id}, '${escAttr(c.name)}')"><i class="fas fa-trash"></i> מחק</button>
           </div>
         </div>
       `).join('')}</div>`;
@@ -714,6 +715,7 @@ async function loadClients(search) {
                 <div class="btn-group">
                   <button class="btn btn-sm btn-outline" onclick="viewClient(${c.id})"><i class="fas fa-eye"></i></button>
                   <button class="btn btn-sm btn-outline" onclick="editClient(${c.id})"><i class="fas fa-edit"></i></button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteClient(${c.id}, '${escAttr(c.name)}')"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
             </tr>
@@ -815,6 +817,15 @@ async function saveEditClient(id) {
   } catch(e) { toast(e.message, 'error'); }
 }
 
+async function deleteClient(id, name) {
+  if (!confirm(`למחוק את הלקוח "${name}"?`)) return;
+  try {
+    await api(`/clients/${id}`, { method: 'DELETE' });
+    toast('הלקוח נמחק בהצלחה');
+    loadClients('');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
 // === Barbers ===
 async function renderBarbers() {
   const area = document.getElementById('contentArea');
@@ -848,6 +859,7 @@ async function renderBarbers() {
           <div class="info-card-actions">
             <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i> עריכה</button>
             <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i> ימי חופש</button>
+            ${App.user.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteBarber(${b.id}, '${escAttr(b.name)}')"><i class="fas fa-trash"></i> הסר</button>`:''}
           </div>
         </div>
       `).join('')}</div>`;
@@ -866,6 +878,7 @@ async function renderBarbers() {
               <div class="btn-group">
                 <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i></button>
                 <button class="btn btn-sm btn-outline" onclick="manageDaysOff(${b.id},'${escAttr(b.name)}')"><i class="fas fa-calendar-minus"></i></button>
+                ${App.user.role==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteBarber(${b.id}, '${escAttr(b.name)}')"><i class="fas fa-trash"></i></button>`:''}
               </div>
             </td>
           </tr>
@@ -916,6 +929,15 @@ async function saveNewBarber() {
     toast('הספר נוצר בהצלחה');
     renderBarbers();
     App.data.barbers = await api('/barbers');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteBarber(id, name) {
+  if (!confirm(`להסיר את הספר "${name}"?`)) return;
+  try {
+    await api(`/barbers/${id}`, { method: 'DELETE' });
+    toast('הספר הוסר בהצלחה');
+    renderBarbers();
   } catch(e) { toast(e.message, 'error'); }
 }
 
