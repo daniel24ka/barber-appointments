@@ -224,11 +224,12 @@ tr:hover { background: rgba(79,70,229,.02); }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000;
   display: flex; align-items: center; justify-content: center; padding: 1rem;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px); overflow-y: auto;
 }
 .modal {
   background: white; border-radius: var(--radius); width: 100%; max-width: 550px;
   max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+  box-sizing: border-box; overflow-x: hidden;
 }
 .modal-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -357,8 +358,9 @@ tr:hover { background: rgba(79,70,229,.02); }
   .form-row { grid-template-columns: 1fr; }
   .calendar-grid.weekly { grid-template-columns: 50px repeat(7, 1fr); }
   .calendar-appt { font-size: .65rem; }
-  .modal { max-width: 95%; margin: 0.5rem; }
+  .modal { max-width: 100%; width: calc(100% - 1rem); margin: 0.5rem; }
   .modal-body { padding: 1rem; }
+  .modal-overlay { padding: 0.5rem; }
   .top-bar { padding: .6rem 1rem; }
   .top-bar h1 { font-size: 1.1rem; }
   .content-area { padding: 1rem; }
@@ -395,11 +397,13 @@ tr:hover { background: rgba(79,70,229,.02); }
   .calendar-grid.weekly { grid-template-columns: 40px repeat(7, 1fr); }
   .calendar-header-cell { font-size: .7rem; padding: .4rem .2rem; }
   .time-cell { font-size: .7rem; padding: .2rem; }
-  .modal { max-width: 100%; width: 100%; margin: 0; border-radius: var(--radius) var(--radius) 0 0; }
+  .modal { max-width: 100%; width: 100%; margin: 0; border-radius: var(--radius) var(--radius) 0 0; max-height: 85vh; }
   .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-header { padding: 0.75rem 1rem; }
   .modal-body { padding: 0.75rem; }
-  .modal-actions { flex-wrap: wrap; }
+  .modal-body .form-row { grid-template-columns: 1fr; }
+  .modal-actions { flex-wrap: wrap; padding: 0.75rem; }
   .modal-actions .btn { flex: 1; min-width: 45%; justify-content: center; }
-  .table-container { -webkit-overflow-scrolling: touch; }
-  .table th, .table td { padding: .5rem .4rem; font-size: .85rem; }
+  .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th, td { padding: .5rem .4rem; font-size: .82rem; word-break: break-word; }
 }
