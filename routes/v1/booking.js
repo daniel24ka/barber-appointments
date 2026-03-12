@@ -2,11 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../../db/schema');
 
+// All booking routes expect req.tenantId to be set by the tenant middleware in server.js
+
 // Get active barbers (public)
 router.get('/barbers', async (req, res) => {
   try {
     const db = getDb();
-    const barbers = await db.prepare('SELECT id, name, specialty, color, work_start_time, work_end_time, work_days FROM barbers WHERE active = 1 ORDER BY name').all();
+    const tid = req.tenantId;
+    const barbers = await db.prepare('SELECT id, name, specialty, color, work_start_time, work_end_time, work_days FROM barbers WHERE active = 1 AND tenant_id = ? ORDER BY name').all(tid);
     res.json(barbers);
   } catch (err) {
     res.status(500).json({ error: 'שגיאה בטעינת ספרים' });
@@ -17,7 +20,8 @@ router.get('/barbers', async (req, res) => {
 router.get('/services', async (req, res) => {
   try {
     const db = getDb();
-    const services = await db.prepare('SELECT id, name, duration, price, color FROM services WHERE active = 1 ORDER BY sort_order, name').all();
+    const tid = req.tenantId;
+    const services = await db.prepare('SELECT id, name, duration, price, color FROM services WHERE active = 1 AND tenant_id = ? ORDER BY sort_order, name').all(tid);
     res.json(services);
   } catch (err) {
     res.status(500).json({ error: 'שגיאה בטעינת שירותים' });
@@ -28,6 +32,7 @@ router.get('/services', async (req, res) => {
 router.get('/slots/:barber_id/:date', async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const { barber_id, date } = req.params;
 
     // Validate date is not in the past
@@ -38,7 +43,7 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
       return res.json({ slots: [], reason: 'לא ניתן להזמין תור בתאריך שעבר' });
     }
 
-    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1').get(barber_id);
+    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1 AND tenant_id = ?').get(barber_id, tid);
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
     // Check day off
@@ -53,26 +58,26 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
     const { service_id } = req.query;
     let service;
     if (service_id) {
-      service = await db.prepare("SELECT * FROM services WHERE id = ? AND active = 1").get(service_id);
+      service = await db.prepare("SELECT * FROM services WHERE id = ? AND active = 1 AND tenant_id = ?").get(service_id, tid);
     }
     if (!service) {
-      service = await db.prepare("SELECT * FROM services WHERE active = 1 ORDER BY sort_order ASC LIMIT 1").get();
+      service = await db.prepare("SELECT * FROM services WHERE active = 1 AND tenant_id = ? ORDER BY sort_order ASC LIMIT 1").get(tid);
     }
     const slotDuration = service ? service.duration : 30;
 
     // Get existing appointments
     const existing = await db.prepare(`
       SELECT start_time, end_time FROM appointments
-      WHERE barber_id = ? AND date = ? AND status NOT IN ('cancelled')
+      WHERE barber_id = ? AND date = ? AND status NOT IN ('cancelled') AND tenant_id = ?
       ORDER BY start_time
-    `).all(barber_id, date);
+    `).all(barber_id, date, tid);
 
     // Generate slots based on service duration
     const [startH, startM] = barber.work_start_time.split(':').map(Number);
     const [endH, endM] = barber.work_end_time.split(':').map(Number);
     let currentMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
-    const interval = parseInt((await db.prepare("SELECT value FROM settings WHERE key = 'slot_interval'").get())?.value || '15');
+    const interval = parseInt((await db.prepare("SELECT value FROM settings WHERE key = 'slot_interval' AND tenant_id = ?").get(tid))?.value || '15');
 
     // If today, skip past slots
     const now = new Date();
@@ -113,6 +118,7 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
 router.post('/book', async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const { barber_id, date, start_time, client_name, client_phone, service_id } = req.body;
 
     if (!barber_id || !date || !start_time || !client_name || !client_phone) {
@@ -136,14 +142,14 @@ router.post('/book', async (req, res) => {
     // Get service
     let service;
     if (service_id) {
-      service = await db.prepare("SELECT * FROM services WHERE id = ? AND active = 1").get(service_id);
+      service = await db.prepare("SELECT * FROM services WHERE id = ? AND active = 1 AND tenant_id = ?").get(service_id, tid);
     }
     if (!service) {
-      service = await db.prepare("SELECT * FROM services WHERE active = 1 ORDER BY sort_order ASC LIMIT 1").get();
+      service = await db.prepare("SELECT * FROM services WHERE active = 1 AND tenant_id = ? ORDER BY sort_order ASC LIMIT 1").get(tid);
     }
     if (!service) return res.status(500).json({ error: 'לא נמצא שירות פעיל' });
 
-    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1').get(barber_id);
+    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ? AND active = 1 AND tenant_id = ?').get(barber_id, tid);
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
     // Calculate end time
@@ -154,26 +160,26 @@ router.post('/book', async (req, res) => {
     // Check conflict
     const conflict = await db.prepare(`
       SELECT id FROM appointments
-      WHERE barber_id = ? AND date = ? AND status NOT IN ('cancelled')
+      WHERE barber_id = ? AND date = ? AND status NOT IN ('cancelled') AND tenant_id = ?
       AND start_time < ? AND end_time > ?
-    `).get(barber_id, date, end_time, start_time);
+    `).get(barber_id, date, tid, end_time, start_time);
 
     if (conflict) {
       return res.status(409).json({ error: 'השעה כבר תפוסה, נא לבחור שעה אחרת' });
     }
 
-    // Find or create client
-    let client = await db.prepare('SELECT * FROM clients WHERE phone = ?').get(cleanPhone);
+    // Find or create client (scoped to tenant)
+    let client = await db.prepare('SELECT * FROM clients WHERE phone = ? AND tenant_id = ?').get(cleanPhone, tid);
     if (!client) {
-      const result = await db.prepare('INSERT INTO clients (name, phone) VALUES (?, ?)').run(client_name.trim(), cleanPhone);
+      const result = await db.prepare('INSERT INTO clients (tenant_id, name, phone) VALUES (?, ?, ?)').run(tid, client_name.trim(), cleanPhone);
       client = { id: result.lastInsertRowid };
     }
 
     // Create appointment
     await db.prepare(`
-      INSERT INTO appointments (client_id, barber_id, service_id, date, start_time, end_time, duration, status, price)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-    `).run(client.id, barber_id, service.id, date, start_time, end_time, service.duration, service.price);
+      INSERT INTO appointments (tenant_id, client_id, barber_id, service_id, date, start_time, end_time, duration, status, price)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+    `).run(tid, client.id, barber_id, service.id, date, start_time, end_time, service.duration, service.price);
 
     res.status(201).json({
       message: 'התור נקבע בהצלחה!',
@@ -194,10 +200,11 @@ router.post('/book', async (req, res) => {
 router.get('/client-lookup/:phone', async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const cleanPhone = req.params.phone.replace(/[-\s]/g, '');
     if (cleanPhone.length < 9) return res.json({ found: false });
 
-    const client = await db.prepare('SELECT id, name, phone, total_visits, vip, last_visit FROM clients WHERE phone = ?').get(cleanPhone);
+    const client = await db.prepare('SELECT id, name, phone, total_visits, vip, last_visit FROM clients WHERE phone = ? AND tenant_id = ?').get(cleanPhone, tid);
     if (!client) return res.json({ found: false });
 
     // Get last completed appointment with barber + service names
@@ -206,10 +213,10 @@ router.get('/client-lookup/:phone', async (req, res) => {
       FROM appointments a
       JOIN barbers b ON a.barber_id = b.id
       JOIN services s ON a.service_id = s.id
-      WHERE a.client_id = ? AND a.status = 'completed'
+      WHERE a.client_id = ? AND a.status = 'completed' AND a.tenant_id = ?
       ORDER BY a.date DESC, a.start_time DESC
       LIMIT 1
-    `).get(client.id);
+    `).get(client.id, tid);
 
     res.json({
       found: true,
@@ -232,13 +239,21 @@ router.get('/client-lookup/:phone', async (req, res) => {
 router.get('/info', async (req, res) => {
   try {
     const db = getDb();
-    const settings = await db.prepare('SELECT key, value FROM settings').all();
+    const tid = req.tenantId;
+    const settings = await db.prepare('SELECT key, value FROM settings WHERE tenant_id = ?').all(tid);
     const info = {};
     settings.forEach(s => { info[s.key] = s.value; });
+
+    // Also get tenant branding
+    const tenant = await db.prepare('SELECT name, logo_url, primary_color FROM tenants WHERE id = ?').get(tid);
+
     res.json({
-      name: info.shop_name || 'מספרה',
+      name: info.shop_name || tenant?.name || 'מספרה',
       phone: info.shop_phone || '',
-      address: info.shop_address || ''
+      address: info.shop_address || '',
+      logo_url: tenant?.logo_url || null,
+      primary_color: tenant?.primary_color || '#4F46E5',
+      tenant_id: tid
     });
   } catch (err) {
     res.status(500).json({ error: 'שגיאה' });

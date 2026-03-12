@@ -2,27 +2,30 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../../db/schema');
 const { authenticateToken } = require('../../middleware/auth');
+const { requireTenant } = require('../../middleware/tenant');
 
 router.use(authenticateToken);
+router.use(requireTenant);
 
 // Dashboard stats
 router.get('/stats', async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
-    const todayAppts = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(today)).c;
-    const pendingAppts = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status = 'pending'").get(today)).c;
-    const totalClients = (await db.prepare('SELECT COUNT(*) as c FROM clients').get()).c;
-    const totalBarbers = (await db.prepare('SELECT COUNT(*) as c FROM barbers WHERE active = 1').get()).c;
+    const todayAppts = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled') AND tenant_id = ?").get(today, tid)).c;
+    const pendingAppts = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status = 'pending' AND tenant_id = ?").get(today, tid)).c;
+    const totalClients = (await db.prepare('SELECT COUNT(*) as c FROM clients WHERE tenant_id = ?').get(tid)).c;
+    const totalBarbers = (await db.prepare('SELECT COUNT(*) as c FROM barbers WHERE active = 1 AND tenant_id = ?').get(tid)).c;
 
     // Revenue today
-    const todayRevenue = (await db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date = ? AND status = 'completed'").get(today)).total;
+    const todayRevenue = (await db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date = ? AND status = 'completed' AND tenant_id = ?").get(today, tid)).total;
 
     // Revenue this month
     const monthStart = today.substring(0, 7) + '-01';
-    const monthRevenue = (await db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date >= ? AND status = 'completed'").get(monthStart)).total;
+    const monthRevenue = (await db.prepare("SELECT COALESCE(SUM(price), 0) as total FROM appointments WHERE date >= ? AND status = 'completed' AND tenant_id = ?").get(monthStart, tid)).total;
 
     // Upcoming appointments (next 10)
     const upcoming = await db.prepare(`
@@ -33,10 +36,10 @@ router.get('/stats', async (req, res) => {
       JOIN clients c ON a.client_id = c.id
       JOIN barbers b ON a.barber_id = b.id
       JOIN services s ON a.service_id = s.id
-      WHERE a.date >= ? AND a.status IN ('pending', 'confirmed')
+      WHERE a.date >= ? AND a.status IN ('pending', 'confirmed') AND a.tenant_id = ?
       ORDER BY a.date ASC, a.start_time ASC
       LIMIT 10
-    `).all(today);
+    `).all(today, tid);
 
     // Reminders: pending appointments for today not confirmed
     const reminders = await db.prepare(`
@@ -44,9 +47,9 @@ router.get('/stats', async (req, res) => {
       FROM appointments a
       JOIN clients c ON a.client_id = c.id
       JOIN barbers b ON a.barber_id = b.id
-      WHERE a.date = ? AND a.status = 'pending'
+      WHERE a.date = ? AND a.status = 'pending' AND a.tenant_id = ?
       ORDER BY a.start_time
-    `).all(today);
+    `).all(today, tid);
 
     // Week stats
     const weekDays = [];
@@ -54,7 +57,7 @@ router.get('/stats', async (req, res) => {
       const d = new Date();
       d.setDate(d.getDate() - d.getDay() + i);
       const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      const count = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled')").get(ds)).c;
+      const count = (await db.prepare("SELECT COUNT(*) as c FROM appointments WHERE date = ? AND status NOT IN ('cancelled') AND tenant_id = ?").get(ds, tid)).c;
       weekDays.push({ date: ds, day: d.getDay(), count });
     }
 
@@ -62,10 +65,10 @@ router.get('/stats', async (req, res) => {
     const topClients = await db.prepare(`
       SELECT id, name, phone, total_visits, vip, last_visit
       FROM clients
-      WHERE total_visits > 0
+      WHERE total_visits > 0 AND tenant_id = ?
       ORDER BY total_visits DESC
       LIMIT 5
-    `).all();
+    `).all(tid);
 
     // Clients at risk (visited before but not in 30+ days)
     const atRiskClients = await db.prepare(`
@@ -73,18 +76,19 @@ router.get('/stats', async (req, res) => {
       FROM clients
       WHERE last_visit IS NOT NULL
       AND last_visit < NOW() - INTERVAL '30 days'
+      AND tenant_id = ?
       ORDER BY last_visit ASC
       LIMIT 5
-    `).all();
+    `).all(tid);
 
     // New clients this month
     const newClientsMonth = (await db.prepare(
-      "SELECT COUNT(*) as c FROM clients WHERE created_at >= ?"
-    ).get(monthStart)).c;
+      "SELECT COUNT(*) as c FROM clients WHERE created_at >= ? AND tenant_id = ?"
+    ).get(monthStart, tid)).c;
 
     // Returning client rate (clients with 2+ visits / total clients with visits)
-    const clientsWithVisits = (await db.prepare("SELECT COUNT(*) as c FROM clients WHERE total_visits > 0").get()).c;
-    const returningClients = (await db.prepare("SELECT COUNT(*) as c FROM clients WHERE total_visits >= 2").get()).c;
+    const clientsWithVisits = (await db.prepare("SELECT COUNT(*) as c FROM clients WHERE total_visits > 0 AND tenant_id = ?").get(tid)).c;
+    const returningClients = (await db.prepare("SELECT COUNT(*) as c FROM clients WHERE total_visits >= 2 AND tenant_id = ?").get(tid)).c;
     const returningRate = clientsWithVisits > 0 ? Math.round((returningClients / clientsWithVisits) * 100) : 0;
 
     res.json({
@@ -112,6 +116,7 @@ router.get('/stats', async (req, res) => {
 router.get('/revenue', async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const numMonths = parseInt(req.query.months) || 6;
 
     // Monthly revenue for last N months
@@ -124,8 +129,8 @@ router.get('/revenue', async (req, res) => {
       const monthEnd = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
 
       const row = await db.prepare(
-        "SELECT COALESCE(SUM(price), 0) as revenue, COUNT(*) as count FROM appointments WHERE date >= ? AND date < ? AND status = 'completed'"
-      ).get(monthStart, monthEnd);
+        "SELECT COALESCE(SUM(price), 0) as revenue, COUNT(*) as count FROM appointments WHERE date >= ? AND date < ? AND status = 'completed' AND tenant_id = ?"
+      ).get(monthStart, monthEnd, tid);
 
       monthlyRevenue.push({
         month: monthStart.substring(0, 7),
@@ -142,20 +147,20 @@ router.get('/revenue', async (req, res) => {
       SELECT b.id, b.name, b.color, COALESCE(SUM(a.price), 0) as revenue, COUNT(a.id) as count
       FROM barbers b
       LEFT JOIN appointments a ON a.barber_id = b.id AND a.date >= ? AND a.status = 'completed'
-      WHERE b.active = 1
+      WHERE b.active = 1 AND b.tenant_id = ?
       GROUP BY b.id, b.name, b.color
       ORDER BY revenue DESC
-    `).all(curMonthStart);
+    `).all(curMonthStart, tid);
 
     // Revenue by service (current month)
     const revenueByService = await db.prepare(`
       SELECT s.id, s.name, s.color, COALESCE(SUM(a.price), 0) as revenue, COUNT(a.id) as count
       FROM services s
       LEFT JOIN appointments a ON a.service_id = s.id AND a.date >= ? AND a.status = 'completed'
-      WHERE s.active = 1
+      WHERE s.active = 1 AND s.tenant_id = ?
       GROUP BY s.id, s.name, s.color
       ORDER BY revenue DESC
-    `).all(curMonthStart);
+    `).all(curMonthStart, tid);
 
     // Weekly revenue (last 4 weeks)
     const weeklyRevenue = [];
@@ -169,8 +174,8 @@ router.get('/revenue', async (req, res) => {
       const we = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
 
       const row = await db.prepare(
-        "SELECT COALESCE(SUM(price), 0) as revenue, COUNT(*) as count FROM appointments WHERE date >= ? AND date <= ? AND status = 'completed'"
-      ).get(ws, we);
+        "SELECT COALESCE(SUM(price), 0) as revenue, COUNT(*) as count FROM appointments WHERE date >= ? AND date <= ? AND status = 'completed' AND tenant_id = ?"
+      ).get(ws, we, tid);
 
       weeklyRevenue.push({
         start: ws,

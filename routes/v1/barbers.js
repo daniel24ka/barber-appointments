@@ -3,14 +3,16 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { getDb } = require('../../db/schema');
 const { authenticateToken, requireRole } = require('../../middleware/auth');
+const { requireTenant } = require('../../middleware/tenant');
 
 router.use(authenticateToken);
+router.use(requireTenant);
 
 // Get all barbers
 router.get('/', async (req, res) => {
   try {
     const db = getDb();
-    const barbers = await db.prepare('SELECT * FROM barbers WHERE active = 1 ORDER BY name').all();
+    const barbers = await db.prepare('SELECT * FROM barbers WHERE active = 1 AND tenant_id = ? ORDER BY name').all(req.tenantId);
     res.json(barbers);
   } catch (err) {
     res.status(500).json({ error: 'שגיאה בטעינת ספרים' });
@@ -21,7 +23,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const db = getDb();
-    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ?').get(req.params.id);
+    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
     res.json(barber);
   } catch (err) {
@@ -33,27 +35,28 @@ router.get('/:id', async (req, res) => {
 router.post('/', requireRole('admin'), async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const { name, phone, email, specialty, work_start_time, work_end_time, work_days, slot_duration, color, username, password } = req.body;
 
     if (!name) return res.status(400).json({ error: 'שם הספר הוא שדה חובה' });
 
     let userId = null;
     if (username && password) {
-      const existing = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+      const existing = await db.prepare('SELECT id FROM users WHERE username = ? AND tenant_id = ?').get(username, tid);
       if (existing) return res.status(409).json({ error: 'שם המשתמש כבר קיים' });
 
       const hashed = bcrypt.hashSync(password, 10);
-      const userResult = await db.prepare('INSERT INTO users (username, password, role, display_name, phone, email) VALUES (?, ?, ?, ?, ?, ?)').run(
-        username, hashed, 'barber', name, phone || '', email || ''
+      const userResult = await db.prepare('INSERT INTO users (tenant_id, username, password, role, display_name, phone, email) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+        tid, username, hashed, 'barber', name, phone || '', email || ''
       );
       userId = userResult.lastInsertRowid;
     }
 
     const result = await db.prepare(`
-      INSERT INTO barbers (user_id, name, phone, email, specialty, work_start_time, work_end_time, work_days, slot_duration, color)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO barbers (tenant_id, user_id, name, phone, email, specialty, work_start_time, work_end_time, work_days, slot_duration, color)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      userId, name, phone || '', email || '', specialty || '',
+      tid, userId, name, phone || '', email || '', specialty || '',
       work_start_time || '09:00', work_end_time || '18:00',
       work_days || '0,1,2,3,4', slot_duration || 30, color || '#4F46E5'
     );
@@ -72,20 +75,20 @@ router.put('/:id', requireRole('admin', 'barber'), async (req, res) => {
     const db = getDb();
     const { name, phone, email, specialty, work_start_time, work_end_time, work_days, slot_duration, color, notes } = req.body;
 
-    const existing = await db.prepare('SELECT * FROM barbers WHERE id = ?').get(req.params.id);
+    const existing = await db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
     if (!existing) return res.status(404).json({ error: 'ספר לא נמצא' });
 
     await db.prepare(`
       UPDATE barbers SET name = ?, phone = ?, email = ?, specialty = ?,
       work_start_time = ?, work_end_time = ?, work_days = ?, slot_duration = ?,
       color = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = ? AND tenant_id = ?
     `).run(
       name || existing.name, phone ?? existing.phone, email ?? existing.email,
       specialty ?? existing.specialty, work_start_time || existing.work_start_time,
       work_end_time || existing.work_end_time, work_days || existing.work_days,
       slot_duration || existing.slot_duration, color || existing.color,
-      notes ?? existing.notes, req.params.id
+      notes ?? existing.notes, req.params.id, req.tenantId
     );
 
     const updated = await db.prepare('SELECT * FROM barbers WHERE id = ?').get(req.params.id);
@@ -100,7 +103,7 @@ router.put('/:id', requireRole('admin', 'barber'), async (req, res) => {
 router.delete('/:id', requireRole('admin'), async (req, res) => {
   try {
     const db = getDb();
-    await db.prepare('UPDATE barbers SET active = 0 WHERE id = ?').run(req.params.id);
+    await db.prepare('UPDATE barbers SET active = 0 WHERE id = ? AND tenant_id = ?').run(req.params.id, req.tenantId);
     res.json({ message: 'הספר הוסר בהצלחה' });
   } catch (err) {
     res.status(500).json({ error: 'שגיאה בהסרת ספר' });
@@ -111,6 +114,8 @@ router.delete('/:id', requireRole('admin'), async (req, res) => {
 router.get('/:id/days-off', async (req, res) => {
   try {
     const db = getDb();
+    const barber = await db.prepare('SELECT id FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+    if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
     const daysOff = await db.prepare('SELECT * FROM days_off WHERE barber_id = ? ORDER BY date').all(req.params.id);
     res.json(daysOff);
   } catch (err) {
@@ -123,6 +128,9 @@ router.post('/:id/days-off', requireRole('admin', 'barber'), async (req, res) =>
     const db = getDb();
     const { date, reason } = req.body;
     if (!date) return res.status(400).json({ error: 'נא לציין תאריך' });
+
+    const barber = await db.prepare('SELECT id FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+    if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
     await db.query(
       'INSERT INTO days_off (barber_id, date, reason) VALUES ($1, $2, $3) ON CONFLICT (barber_id, date) DO UPDATE SET reason = EXCLUDED.reason',

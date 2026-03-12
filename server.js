@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { initDatabase } = require('./db/schema');
+const { resolveTenantBySlug } = require('./middleware/tenant');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,10 +35,17 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Public booking routes (no auth required)
-app.use('/api/booking', require('./routes/v1/booking'));
+// Public booking routes - with tenant slug
+app.use('/api/booking/:slug', resolveTenantBySlug, require('./routes/v1/booking'));
 
-// Routes
+// Public booking routes - default tenant (backwards compatible)
+app.use('/api/booking', (req, res, next) => {
+  // Default to tenant_id 1 for backwards compatibility
+  req.tenantId = 1;
+  next();
+}, require('./routes/v1/booking'));
+
+// Routes (all use tenant_id from JWT via requireTenant middleware)
 app.use('/api/auth', require('./routes/v1/auth'));
 app.use('/api/appointments', require('./routes/v1/appointments'));
 app.use('/api/barbers', require('./routes/v1/barbers'));
@@ -47,6 +55,13 @@ app.use('/api/dashboard', require('./routes/v1/dashboard'));
 app.use('/api/settings', require('./routes/v1/settings'));
 app.use('/api/export', require('./routes/v1/export'));
 app.use('/api/consents', require('./routes/v1/consents'));
+app.use('/api/tenants', require('./routes/v1/tenants'));
+
+// Serve booking page for tenant slug: /book/:slug
+app.get('/book/:slug', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'public', 'book.html'));
+});
 
 // SPA fallback
 app.get('*', (req, res) => {

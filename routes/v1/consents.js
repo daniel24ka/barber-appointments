@@ -7,13 +7,14 @@ const { authenticateToken, requireRole } = require('../../middleware/auth');
 router.post('/booking', async (req, res) => {
   try {
     const db = getDb();
-    const { client_name, client_phone, consent_text } = req.body;
+    const { client_name, client_phone, consent_text, tenant_id } = req.body;
     if (!consent_text) return res.status(400).json({ error: 'חסר טקסט הסכמה' });
 
     await db.prepare(`
-      INSERT INTO consents (consent_type, entity_type, entity_name, entity_phone, ip_address, user_agent, consent_text)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO consents (tenant_id, consent_type, entity_type, entity_name, entity_phone, ip_address, user_agent, consent_text)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
+      tenant_id || 1,
       'booking_privacy',
       'client',
       client_name || '',
@@ -38,9 +39,10 @@ router.post('/terms', authenticateToken, async (req, res) => {
     if (!consent_text) return res.status(400).json({ error: 'חסר טקסט הסכמה' });
 
     await db.prepare(`
-      INSERT INTO consents (consent_type, entity_type, entity_id, entity_name, ip_address, user_agent, consent_text)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO consents (tenant_id, consent_type, entity_type, entity_id, entity_name, ip_address, user_agent, consent_text)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
+      req.user.tenant_id || 1,
       'terms_of_use',
       'user',
       req.user.id,
@@ -74,15 +76,16 @@ router.get('/check', authenticateToken, async (req, res) => {
 router.get('/log', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.user.tenant_id;
     const { type, page } = req.query;
     const limit = 50;
     const offset = ((parseInt(page) || 1) - 1) * limit;
 
-    let sql = 'SELECT * FROM consents';
-    const params = [];
+    let sql = 'SELECT * FROM consents WHERE tenant_id = ?';
+    const params = [tid];
 
     if (type) {
-      sql += ' WHERE consent_type = ?';
+      sql += ' AND consent_type = ?';
       params.push(type);
     }
 
@@ -92,10 +95,10 @@ router.get('/log', authenticateToken, requireRole('admin'), async (req, res) => 
     const consents = await db.prepare(sql).all(...params);
 
     // Get total count
-    let countSql = 'SELECT COUNT(*) as c FROM consents';
-    const countParams = [];
+    let countSql = 'SELECT COUNT(*) as c FROM consents WHERE tenant_id = ?';
+    const countParams = [tid];
     if (type) {
-      countSql += ' WHERE consent_type = ?';
+      countSql += ' AND consent_type = ?';
       countParams.push(type);
     }
     const total = (await db.prepare(countSql).get(...countParams)).c;

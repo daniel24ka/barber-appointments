@@ -326,6 +326,11 @@
 <script>
 const DAYS_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
+// Detect tenant slug from URL: /book/:slug
+const pathParts = window.location.pathname.split('/').filter(Boolean);
+const tenantSlug = pathParts[0] === 'book' && pathParts[1] ? pathParts[1] : null;
+const API_BASE = tenantSlug ? `/api/booking/${tenantSlug}` : '/api/booking';
+
 const state = {
   barbers: [],
   services: [],
@@ -333,21 +338,29 @@ const state = {
   selectedService: null,
   selectedDate: null,
   selectedSlot: null,
-  currentStep: 1
+  currentStep: 1,
+  tenantId: null
 };
 
 // Init
 (async function init() {
   try {
     const [info, barbers, services] = await Promise.all([
-      fetch('/api/booking/info').then(r => r.json()),
-      fetch('/api/booking/barbers').then(r => r.json()),
-      fetch('/api/booking/services').then(r => r.json())
+      fetch(`${API_BASE}/info`).then(r => r.json()),
+      fetch(`${API_BASE}/barbers`).then(r => r.json()),
+      fetch(`${API_BASE}/services`).then(r => r.json())
     ]);
+
+    // Store tenant id for consent logging
+    state.tenantId = info.tenant_id || null;
 
     if (info.name) {
       document.getElementById('shopTitle').textContent = info.name;
       document.title = `הזמנת תור - ${info.name}`;
+    }
+    // Apply tenant branding
+    if (info.primary_color && info.primary_color !== '#4F46E5') {
+      document.documentElement.style.setProperty('--primary', info.primary_color);
     }
     const details = [];
     if (info.phone) details.push(`<i class="fas fa-phone"></i> ${info.phone}`);
@@ -470,7 +483,7 @@ async function loadSlots() {
 
   try {
     const serviceParam = state.selectedService ? `?service_id=${state.selectedService.id}` : '';
-    const res = await fetch(`/api/booking/slots/${state.selectedBarber.id}/${date}${serviceParam}`);
+    const res = await fetch(`${API_BASE}/slots/${state.selectedBarber.id}/${date}${serviceParam}`);
     const data = await res.json();
 
     if (data.reason || !data.slots || data.slots.length === 0) {
@@ -530,13 +543,14 @@ async function confirmBooking() {
       body: JSON.stringify({
         client_name: name,
         client_phone: phone,
+        tenant_id: state.tenantId,
         consent_text: 'אני מאשר/ת כי קראתי את מדיניות הפרטיות ומסכים/ה לאיסוף ושמירת הפרטים שלי לצורך ניהול תורים ויצירת קשר בנוגע לתור שנקבע.'
       })
     });
   } catch(e) { /* consent log failure should not block booking */ }
 
   try {
-    const res = await fetch('/api/booking/book', {
+    const res = await fetch(`${API_BASE}/book`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -594,7 +608,7 @@ function onPhoneInput(val) {
 async function lookupClient(phone) {
   lastLookedUpPhone = phone;
   try {
-    const res = await fetch(`/api/booking/client-lookup/${phone}`);
+    const res = await fetch(`${API_BASE}/client-lookup/${phone}`);
     const data = await res.json();
     if (data.found) {
       showWelcomeBanner(data);

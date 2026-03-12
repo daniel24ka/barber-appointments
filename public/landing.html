@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#4F46E5">
+  <title>דניטק - מערכת ניהול תורים למספרות</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4F46E5; --primary-light: #818CF8; --primary-dark: #3730A3;
+      --success: #10B981; --bg: #F1F5F9; --text: #1E293B; --text-secondary: #64748B;
+      --border: #E2E8F0; --radius: 16px; --font: 'Heebo', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); color: var(--text); line-height: 1.7; direction: rtl; }
+
+    .hero {
+      background: linear-gradient(135deg, #1E1B4B 0%, #3730A3 40%, #4F46E5 70%, #818CF8 100%);
+      color: white; text-align: center; padding: 4rem 1.5rem 3rem; min-height: 70vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .hero-logo { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.9; }
+    .hero h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto 2rem; }
+    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .hero-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.85rem 2rem; border-radius: 12px; font-family: var(--font);
+      font-size: 1.1rem; font-weight: 700; text-decoration: none; transition: all .2s;
+    }
+    .hero-btn-primary { background: white; color: var(--primary-dark); border: none; }
+    .hero-btn-primary:hover { background: #EEF2FF; transform: translateY(-2px); }
+    .hero-btn-outline { background: transparent; color: white; border: 2px solid rgba(255,255,255,.5); }
+    .hero-btn-outline:hover { border-color: white; background: rgba(255,255,255,.1); }
+
+    .features { padding: 4rem 1.5rem; background: white; }
+    .features-grid {
+      max-width: 1000px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;
+    }
+    .features h2 { text-align: center; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--primary-dark); }
+    .features .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 3rem; font-size: 1.1rem; }
+    .feature-card {
+      background: var(--bg); border-radius: var(--radius); padding: 2rem; text-align: center;
+      transition: transform .2s;
+    }
+    .feature-card:hover { transform: translateY(-4px); }
+    .feature-icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem; }
+    .feature-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card p { color: var(--text-secondary); font-size: 0.95rem; }
+
+    .pricing { padding: 4rem 1.5rem; background: var(--bg); }
+    .pricing h2 { text-align: center; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--primary-dark); }
+    .pricing .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 3rem; font-size: 1.1rem; }
+    .pricing-grid {
+      max-width: 900px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem;
+    }
+    .price-card {
+      background: white; border-radius: var(--radius); padding: 2rem; text-align: center;
+      border: 2px solid var(--border); transition: all .2s;
+    }
+    .price-card.featured { border-color: var(--primary); box-shadow: 0 10px 30px rgba(79,70,229,.15); }
+    .price-card h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .price-amount { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin: 1rem 0; }
+    .price-amount small { font-size: 0.9rem; font-weight: 400; color: var(--text-secondary); }
+    .price-features { list-style: none; text-align: right; margin: 1.5rem 0; }
+    .price-features li { padding: 0.4rem 0; font-size: 0.95rem; color: var(--text-secondary); }
+    .price-features li i { color: var(--success); margin-left: 0.5rem; width: 18px; }
+    .price-btn {
+      display: block; width: 100%; padding: 0.75rem; border-radius: 10px;
+      font-family: var(--font); font-size: 1rem; font-weight: 600; text-decoration: none;
+      text-align: center; transition: all .2s;
+    }
+    .price-btn-primary { background: var(--primary); color: white; border: none; }
+    .price-btn-primary:hover { background: var(--primary-dark); }
+    .price-btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); }
+    .price-btn-outline:hover { background: #EEF2FF; }
+
+    .cta { padding: 4rem 1.5rem; background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: white; text-align: center; }
+    .cta h2 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .cta p { opacity: 0.9; margin-bottom: 2rem; font-size: 1.1rem; }
+
+    .footer {
+      padding: 2rem 1.5rem; background: #1E1B4B; color: rgba(255,255,255,.7);
+      text-align: center; font-size: 0.9rem;
+    }
+    .footer a { color: var(--primary-light); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.8rem; }
+      .hero p { font-size: 1rem; }
+      .features h2, .pricing h2, .cta h2 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="hero-logo"><i class="fas fa-cut"></i></div>
+    <h1>דניטק - ניהול תורים</h1>
+    <p>מערכת מקצועית לניהול תורים למספרות ובתי עסק. פשוט, מהיר, חכם.</p>
+    <div class="hero-actions">
+      <a href="#contact" class="hero-btn hero-btn-primary"><i class="fas fa-rocket"></i> התחל ניסיון חינם</a>
+      <a href="/book/default" class="hero-btn hero-btn-outline"><i class="fas fa-eye"></i> צפה בדמו</a>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>למה דניטק?</h2>
+    <p class="subtitle">כל מה שמספרה צריכה במקום אחד</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-calendar-check"></i></div>
+        <h3>הזמנה אונליין</h3>
+        <p>הלקוחות מזמינים תורים בעצמם דרך קישור ייעודי לעסק שלך, 24/7</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-users"></i></div>
+        <h3>ניהול לקוחות</h3>
+        <p>מאגר לקוחות חכם עם היסטוריה, דירוג נאמנות ומעקב אחרי לקוחות בסיכון נטישה</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+        <h3>דוחות והכנסות</h3>
+        <p>לוח בקרה עם סטטיסטיקות בזמן אמת, דוחות הכנסות לפי ספר ושירות</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-user-tie"></i></div>
+        <h3>ניהול ספרים</h3>
+        <p>כל ספר עם לוח זמנים, שעות עבודה, ימי חופש ושירותים משלו</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
+        <h3>מותאם למובייל</h3>
+        <p>עובד מושלם בטלפון, טאבלט ומחשב. ממשק בעברית מלאה RTL</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+        <h3>אבטחה ופרטיות</h3>
+        <p>עומד בחוקי הפרטיות הישראליים עם הסכמות מתועדות וניהול רשומות מאגר מידע</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing">
+    <h2>תוכניות ומחירים</h2>
+    <p class="subtitle">התחל בחינם, שדרג כשתצטרך</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3>ניסיון</h3>
+        <div class="price-amount">חינם <small>/ 30 יום</small></div>
+        <ul class="price-features">
+          <li><i class="fas fa-check"></i> עד 3 ספרים</li>
+          <li><i class="fas fa-check"></i> הזמנה אונליין</li>
+          <li><i class="fas fa-check"></i> ניהול לקוחות</li>
+          <li><i class="fas fa-check"></i> לוח בקרה</li>
+        </ul>
+        <a href="#contact" class="price-btn price-btn-outline">התחל ניסיון</a>
+      </div>
+      <div class="price-card featured">
+        <h3>בסיסי</h3>
+        <div class="price-amount">₪99 <small>/ חודש</small></div>
+        <ul class="price-features">
+          <li><i class="fas fa-check"></i> ספרים ללא הגבלה</li>
+          <li><i class="fas fa-check"></i> הזמנה אונליין + קישור ייעודי</li>
+          <li><i class="fas fa-check"></i> דוחות הכנסות</li>
+          <li><i class="fas fa-check"></i> ייצוא CSV</li>
+          <li><i class="fas fa-check"></i> מיתוג בסיסי (צבע + לוגו)</li>
+        </ul>
+        <a href="#contact" class="price-btn price-btn-primary">הצטרף עכשיו</a>
+      </div>
+      <div class="price-card">
+        <h3>פרימיום</h3>
+        <div class="price-amount">₪199 <small>/ חודש</small></div>
+        <ul class="price-features">
+          <li><i class="fas fa-check"></i> הכל בבסיסי +</li>
+          <li><i class="fas fa-check"></i> תזכורות SMS</li>
+          <li><i class="fas fa-check"></i> דומיין מותאם אישית</li>
+          <li><i class="fas fa-check"></i> תמיכה מועדפת</li>
+          <li><i class="fas fa-check"></i> API גישה</li>
+        </ul>
+        <a href="#contact" class="price-btn price-btn-outline">צור קשר</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="contact">
+    <h2>מוכנים להתחיל?</h2>
+    <p>צרו קשר ונקים לכם את המערכת תוך דקות</p>
+    <div class="hero-actions">
+      <a href="mailto:daniel@danitech.co.il" class="hero-btn hero-btn-primary"><i class="fas fa-envelope"></i> daniel@danitech.co.il</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>נוצר על ידי <strong>דניאל כספין - דניטק</strong></p>
+    <p style="margin-top:0.5rem"><a href="/privacy.html">מדיניות פרטיות</a> | <a href="/accessibility.html">הצהרת נגישות</a></p>
+  </footer>
+</body>
+</html>

@@ -72,7 +72,7 @@ async function showApp() {
   document.getElementById('moreMenuUser').textContent = App.user.display_name;
   document.getElementById('todayDate').textContent = formatDate(new Date());
 
-  if (App.user.role !== 'admin') {
+  if (App.user.role !== 'admin' && App.user.role !== 'super_admin') {
     // Non-admin: show settings as "profile" for password change
     const settingsNav = document.getElementById('settingsNav');
     if (settingsNav) {
@@ -83,6 +83,23 @@ async function showApp() {
     if (settingsMore) {
       const label = settingsMore.querySelector('span');
       if (label && label.textContent === 'הגדרות') label.textContent = 'פרופיל';
+    }
+  }
+
+  // Super admin: add tenants management nav link
+  if (App.user.role === 'super_admin') {
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (sidebarNav && !document.querySelector('[data-page="tenants"]')) {
+      const tenantsLink = document.createElement('a');
+      tenantsLink.href = '#';
+      tenantsLink.className = 'nav-item';
+      tenantsLink.dataset.page = 'tenants';
+      tenantsLink.innerHTML = '<i class="fas fa-building"></i><span>ניהול עסקים</span>';
+      tenantsLink.addEventListener('click', (e) => { e.preventDefault(); navigate('tenants'); });
+      // Insert before settings
+      const settingsNav = document.getElementById('settingsNav');
+      if (settingsNav) sidebarNav.insertBefore(tenantsLink, settingsNav);
+      else sidebarNav.appendChild(tenantsLink);
     }
   }
 
@@ -190,14 +207,16 @@ function navigate(page) {
   const titles = {
     dashboard: 'לוח בקרה', calendar: 'יומן תורים', appointments: 'רשימת תורים',
     newAppointment: 'תור חדש', clients: 'לקוחות', barbers: 'ספרים',
-    services: 'שירותים', reports: 'דוחות הכנסות', settings: 'הגדרות'
+    services: 'שירותים', reports: 'דוחות הכנסות', settings: 'הגדרות',
+    tenants: 'ניהול עסקים'
   };
   document.getElementById('pageTitle').textContent = titles[page] || '';
 
   const renderers = {
     dashboard: renderDashboard, calendar: renderCalendar, appointments: renderAppointments,
     newAppointment: renderNewAppointment, clients: renderClients, barbers: renderBarbers,
-    services: renderServices, reports: renderReports, settings: renderSettings
+    services: renderServices, reports: renderReports, settings: renderSettings,
+    tenants: renderTenants
   };
   if (renderers[page]) renderers[page]();
 
@@ -1757,3 +1776,132 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-login if token exists
   if (App.token && App.user) { showApp(); }
 });
+
+// === Tenant Management (Super Admin) ===
+async function renderTenants() {
+  if (App.user.role !== 'super_admin') { navigate('dashboard'); return; }
+  const area = document.getElementById('contentArea');
+  area.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>טוען...</h3></div>';
+
+  try {
+    const tenants = await api('/tenants');
+
+    const PLAN_HE = { trial: 'ניסיון', basic: 'בסיסי', premium: 'פרימיום' };
+
+    area.innerHTML = `
+      <div class="page-actions" style="margin-bottom:1rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="showCreateTenantModal()"><i class="fas fa-plus"></i> עסק חדש</button>
+        <span style="color:var(--text-secondary);font-size:0.9rem">${tenants.length} עסקים</span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr>
+            <th>שם העסק</th><th>Slug</th><th>תוכנית</th><th>לקוחות</th><th>תורים</th><th>סטטוס</th><th>פעולות</th>
+          </tr></thead>
+          <tbody>
+            ${tenants.map(t => `<tr>
+              <td><strong>${escHtml(t.name)}</strong><br><small style="color:var(--text-secondary)">${escHtml(t.owner_name || '')}</small></td>
+              <td><code>${escHtml(t.slug)}</code></td>
+              <td><span class="badge" style="background:${t.plan === 'premium' ? '#F59E0B' : t.plan === 'basic' ? '#10B981' : '#6B7280'};color:#fff">${PLAN_HE[t.plan] || t.plan}</span></td>
+              <td>${t.stats.clients}</td>
+              <td>${t.stats.appointments}</td>
+              <td>${t.active ? '<span style="color:#10B981"><i class="fas fa-check-circle"></i> פעיל</span>' : '<span style="color:#EF4444"><i class="fas fa-times-circle"></i> מושבת</span>'}</td>
+              <td>
+                <button class="btn btn-sm" onclick="editTenant(${t.id})" title="עריכה"><i class="fas fa-edit"></i></button>
+                <a href="/book/${escAttr(t.slug)}" target="_blank" class="btn btn-sm" title="דף הזמנה"><i class="fas fa-external-link-alt"></i></a>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>שגיאה בטעינת עסקים</h3><p>${escHtml(err.message)}</p></div>`;
+  }
+}
+
+function showCreateTenantModal() {
+  openModal('עסק חדש', `
+    <div class="form-group"><label>שם העסק</label><input type="text" id="tenantName" placeholder="שם המספרה"></div>
+    <div class="form-group"><label>Slug (באנגלית, ללא רווחים)</label><input type="text" id="tenantSlug" placeholder="my-barber" dir="ltr" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')"></div>
+    <div class="form-group"><label>שם בעל העסק</label><input type="text" id="tenantOwner" placeholder="שם מלא"></div>
+    <div class="form-group"><label>אימייל</label><input type="email" id="tenantEmail" placeholder="email@example.com" dir="ltr"></div>
+    <div class="form-group"><label>טלפון</label><input type="tel" id="tenantPhone" placeholder="050-1234567" dir="ltr"></div>
+    <hr style="margin:1rem 0">
+    <h4 style="margin-bottom:0.75rem;color:var(--primary-dark)">משתמש מנהל לעסק</h4>
+    <div class="form-group"><label>שם משתמש</label><input type="text" id="tenantAdminUser" placeholder="שם משתמש" dir="ltr"></div>
+    <div class="form-group"><label>סיסמה</label><input type="password" id="tenantAdminPass" placeholder="סיסמה"></div>
+    <button class="btn btn-primary" onclick="createTenant()"><i class="fas fa-plus"></i> צור עסק</button>
+  `);
+}
+
+async function createTenant() {
+  try {
+    const data = {
+      name: document.getElementById('tenantName').value.trim(),
+      slug: document.getElementById('tenantSlug').value.trim(),
+      owner_name: document.getElementById('tenantOwner').value.trim(),
+      owner_email: document.getElementById('tenantEmail').value.trim(),
+      owner_phone: document.getElementById('tenantPhone').value.trim(),
+      admin_username: document.getElementById('tenantAdminUser').value.trim(),
+      admin_password: document.getElementById('tenantAdminPass').value
+    };
+    if (!data.name || !data.slug || !data.admin_username || !data.admin_password) {
+      toast('נא למלא את כל שדות החובה', 'error'); return;
+    }
+    const result = await api('/tenants', { method: 'POST', body: JSON.stringify(data) });
+    toast(`העסק "${data.name}" נוצר בהצלחה! קישור הזמנה: ${result.bookingUrl}`);
+    closeModal();
+    renderTenants();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function editTenant(id) {
+  try {
+    const tenant = await api(`/tenants/${id}`);
+    const PLAN_HE = { trial: 'ניסיון', basic: 'בסיסי', premium: 'פרימיום' };
+
+    openModal(`עריכת עסק - ${escHtml(tenant.name)}`, `
+      <div class="form-group"><label>שם העסק</label><input type="text" id="editTenantName" value="${escAttr(tenant.name)}"></div>
+      <div class="form-group"><label>בעל העסק</label><input type="text" id="editTenantOwner" value="${escAttr(tenant.owner_name || '')}"></div>
+      <div class="form-group"><label>אימייל</label><input type="email" id="editTenantEmail" value="${escAttr(tenant.owner_email || '')}" dir="ltr"></div>
+      <div class="form-group"><label>טלפון</label><input type="tel" id="editTenantPhone" value="${escAttr(tenant.owner_phone || '')}" dir="ltr"></div>
+      <div class="form-group"><label>צבע ראשי</label><input type="color" id="editTenantColor" value="${tenant.primary_color || '#4F46E5'}"></div>
+      <div class="form-group"><label>תוכנית</label>
+        <select id="editTenantPlan" class="form-control" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font)">
+          <option value="trial" ${tenant.plan==='trial'?'selected':''}>ניסיון</option>
+          <option value="basic" ${tenant.plan==='basic'?'selected':''}>בסיסי</option>
+          <option value="premium" ${tenant.plan==='premium'?'selected':''}>פרימיום</option>
+        </select>
+      </div>
+      <div class="form-group"><label>
+        <input type="checkbox" id="editTenantActive" ${tenant.active ? 'checked' : ''}> עסק פעיל
+      </label></div>
+      <div style="margin:1rem 0;padding:0.75rem;background:var(--bg);border-radius:var(--radius-sm)">
+        <strong>סטטיסטיקות:</strong> ${tenant.stats.clients} לקוחות | ${tenant.stats.appointments} תורים | ₪${tenant.stats.monthRevenue} הכנסות החודש
+      </div>
+      <div style="margin-bottom:0.75rem">
+        <strong>קישור הזמנה:</strong> <a href="/book/${escAttr(tenant.slug)}" target="_blank">/book/${escHtml(tenant.slug)}</a>
+      </div>
+      <button class="btn btn-primary" onclick="saveTenant(${id})"><i class="fas fa-save"></i> שמור</button>
+    `);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function saveTenant(id) {
+  try {
+    const data = {
+      name: document.getElementById('editTenantName').value.trim(),
+      owner_name: document.getElementById('editTenantOwner').value.trim(),
+      owner_email: document.getElementById('editTenantEmail').value.trim(),
+      owner_phone: document.getElementById('editTenantPhone').value.trim(),
+      primary_color: document.getElementById('editTenantColor').value,
+      plan: document.getElementById('editTenantPlan').value,
+      active: document.getElementById('editTenantActive').checked ? 1 : 0
+    };
+    await api(`/tenants/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    toast('העסק עודכן בהצלחה');
+    closeModal();
+    renderTenants();
+  } catch (err) { toast(err.message, 'error'); }
+}

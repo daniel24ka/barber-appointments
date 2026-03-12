@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../../db/schema');
 const { authenticateToken, requireRole } = require('../../middleware/auth');
+const { requireTenant } = require('../../middleware/tenant');
 
 router.use(authenticateToken);
 router.use(requireRole('admin'));
+router.use(requireTenant);
 
 function toCsv(rows, columns) {
   const BOM = '\uFEFF';
@@ -25,7 +27,7 @@ function toCsv(rows, columns) {
 router.get('/clients', async (req, res) => {
   try {
     const db = getDb();
-    const clients = await db.prepare('SELECT * FROM clients ORDER BY name').all();
+    const clients = await db.prepare('SELECT * FROM clients WHERE tenant_id = ? ORDER BY name').all(req.tenantId);
 
     const columns = [
       { key: 'id', label: 'מזהה' },
@@ -53,6 +55,7 @@ router.get('/clients', async (req, res) => {
 router.get('/appointments', async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const { start_date, end_date } = req.query;
 
     let sql = `
@@ -63,19 +66,17 @@ router.get('/appointments', async (req, res) => {
       JOIN clients c ON a.client_id = c.id
       JOIN barbers b ON a.barber_id = b.id
       JOIN services s ON a.service_id = s.id
+      WHERE a.tenant_id = $1
     `;
-    const params = [];
-    let pi = 0;
+    const params = [tid];
+    let pi = 1;
 
     if (start_date) {
-      pi++; sql += ` WHERE a.date >= $${pi}`;
+      pi++; sql += ` AND a.date >= $${pi}`;
       params.push(start_date);
-      if (end_date) {
-        pi++; sql += ` AND a.date <= $${pi}`;
-        params.push(end_date);
-      }
-    } else if (end_date) {
-      pi++; sql += ` WHERE a.date <= $${pi}`;
+    }
+    if (end_date) {
+      pi++; sql += ` AND a.date <= $${pi}`;
       params.push(end_date);
     }
 
@@ -116,6 +117,7 @@ router.get('/appointments', async (req, res) => {
 router.get('/revenue', async (req, res) => {
   try {
     const db = getDb();
+    const tid = req.tenantId;
     const numMonths = parseInt(req.query.months) || 12;
 
     const rows = [];
@@ -131,10 +133,10 @@ router.get('/revenue', async (req, res) => {
         SELECT b.name as barber_name, COALESCE(SUM(a.price), 0) as revenue, COUNT(a.id) as count
         FROM barbers b
         LEFT JOIN appointments a ON a.barber_id = b.id AND a.date >= ? AND a.date < ? AND a.status = 'completed'
-        WHERE b.active = 1
+        WHERE b.active = 1 AND b.tenant_id = ?
         GROUP BY b.id, b.name
         ORDER BY b.name
-      `).all(monthStart, monthEnd);
+      `).all(monthStart, monthEnd, tid);
 
       barberRevenue.forEach(br => {
         rows.push({
