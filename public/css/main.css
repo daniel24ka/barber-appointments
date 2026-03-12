@@ -395,9 +395,11 @@ tr:hover { background: rgba(79,70,229,.02); }
   .calendar-grid.weekly { grid-template-columns: 40px repeat(7, 1fr); }
   .calendar-header-cell { font-size: .7rem; padding: .4rem .2rem; }
   .time-cell { font-size: .7rem; padding: .2rem; }
-  .modal { max-width: 100%; border-radius: var(--radius) var(--radius) 0 0; }
+  .modal { max-width: 100%; width: 100%; margin: 0; border-radius: var(--radius) var(--radius) 0 0; }
   .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-body { padding: 0.75rem; }
   .modal-actions { flex-wrap: wrap; }
   .modal-actions .btn { flex: 1; min-width: 45%; justify-content: center; }
   .table-container { -webkit-overflow-scrolling: touch; }
+  .table th, .table td { padding: .5rem .4rem; font-size: .85rem; }
 }
