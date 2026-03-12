@@ -1533,6 +1533,33 @@ async function renderSettings() {
           </div>
           <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> שמור הגדרות</button>
         </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-header"><h3><i class="fas fa-palette"></i> מיתוג</h3></div>
+          <div class="settings-section">
+            <h3>לוגו העסק</h3>
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+              <div id="logoPreview" style="width:80px;height:80px;border-radius:var(--radius);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg)">
+                ${settings.logo_url ? `<img src="${escAttr(settings.logo_url)}" style="width:100%;height:100%;object-fit:contain" alt="לוגו">` : '<i class="fas fa-image" style="font-size:2rem;color:var(--text-light)"></i>'}
+              </div>
+              <div>
+                <label class="btn btn-sm btn-outline" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem">
+                  <i class="fas fa-upload"></i> העלאת לוגו
+                  <input type="file" id="logoFileInput" accept="image/jpeg,image/png,image/svg+xml,image/webp" style="display:none" onchange="uploadLogo(this)">
+                </label>
+                <div style="font-size:0.8rem;color:var(--text-light);margin-top:0.25rem">JPG, PNG, SVG, WEBP - עד 2MB</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>צבע ראשי</label>
+              <div style="display:flex;align-items:center;gap:0.75rem">
+                <input type="color" id="setBrandColor" value="${escAttr(settings.primary_color || '#4F46E5')}" style="width:50px;height:38px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;padding:2px">
+                <input type="text" id="setBrandColorText" value="${escAttr(settings.primary_color || '#4F46E5')}" style="width:120px;direction:ltr;text-align:center" oninput="document.getElementById('setBrandColor').value=this.value">
+                <div id="brandColorPreview" style="width:38px;height:38px;border-radius:var(--radius-sm);background:${escAttr(settings.primary_color || '#4F46E5')}"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveBranding()"><i class="fas fa-save"></i> שמור מיתוג</button>
+        </div>
       `;
     }
 
@@ -1602,6 +1629,60 @@ async function saveSettings() {
     document.getElementById('shopName').textContent = document.getElementById('setShopName').value;
   } catch(e) { toast(e.message, 'error'); }
 }
+
+async function uploadLogo(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  if (file.size > 2 * 1024 * 1024) {
+    toast('הקובץ גדול מדי. גודל מקסימלי 2MB', 'error');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('logo', file);
+
+  try {
+    const res = await fetch('/api/upload/logo', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${App.token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'שגיאה בהעלאת הלוגו');
+
+    // Update preview
+    document.getElementById('logoPreview').innerHTML = `<img src="${data.logo_url}" style="width:100%;height:100%;object-fit:contain" alt="לוגו">`;
+    toast('הלוגו עודכן בהצלחה');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function saveBranding() {
+  const colorInput = document.getElementById('setBrandColor');
+  const colorTextInput = document.getElementById('setBrandColorText');
+  const color = colorInput ? colorInput.value : '#4F46E5';
+
+  try {
+    await api('/settings', { method: 'PUT', body: JSON.stringify({
+      primary_color: color
+    })});
+    // Update color text input and preview
+    if (colorTextInput) colorTextInput.value = color;
+    const preview = document.getElementById('brandColorPreview');
+    if (preview) preview.style.background = color;
+    toast('המיתוג נשמר בהצלחה');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Sync color picker with text input
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'setBrandColor') {
+    const textInput = document.getElementById('setBrandColorText');
+    const preview = document.getElementById('brandColorPreview');
+    if (textInput) textInput.value = e.target.value;
+    if (preview) preview.style.background = e.target.value;
+  }
+});
 
 // === Consent Log ===
 async function loadConsentLog(type) {

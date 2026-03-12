@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#4F46E5">
+  <meta name="description" content="תנאי שימוש - דניטק מערכת ניהול תורים למספרות">
+  <title>תנאי שימוש | דניטק</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #818CF8;
+      --primary-dark: #3730A3;
+      --text: #1E293B;
+      --text-secondary: #64748B;
+      --text-light: #94A3B8;
+      --bg: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --border: #E2E8F0;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+      color: white;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+      opacity: 0.85;
+    }
+
+    .page-header .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      transition: color 0.2s;
+    }
+
+    .page-header .back-link:hover { color: white; }
+
+    /* Content */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+      flex: 1;
+    }
+
+    .last-updated {
+      text-align: center;
+      color: var(--text-light);
+      font-size: 0.85rem;
+      margin-bottom: 2rem;
+    }
+
+    .section {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
+    }
+
+    .section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section h2 i {
+      font-size: 1rem;
+    }
+
+    .section p {
+      margin-bottom: 0.75rem;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .section ul {
+      margin: 0.5rem 1.5rem 0.75rem;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .section ul li {
+      margin-bottom: 0.4rem;
+    }
+
+    /* Footer */
+    .page-footer {
+      background: #0F0A2E;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+    }
+
+    .page-footer a {
+      color: var(--primary-light);
+      text-decoration: none;
+    }
+
+    .page-footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .page-header h1 { font-size: 1.5rem; }
+      .section { padding: 1.25rem; }
+      .container { padding: 1.5rem 1rem 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <a href="/landing" class="back-link"><i class="fas fa-arrow-right"></i> חזרה לדף הבית</a>
+    <h1><i class="fas fa-file-contract"></i> תנאי שימוש</h1>
+    <p>דניטק - מערכת ניהול תורים למספרות</p>
+  </header>
+
+  <main class="container">
+    <p class="last-updated">עדכון אחרון: מרץ 2026</p>
+
+    <!-- 1. הגדרות -->
+    <div class="section">
+      <h2><i class="fas fa-book"></i> 1. הגדרות</h2>
+      <p><strong>"החברה"</strong> או <strong>"דניטק"</strong> - דניאל כספין, ע.מ., המפעילה את מערכת דניטק לניהול תורים.</p>
+      <p><strong>"המערכת"</strong> - מערכת התוכנה המקוונת (SaaS) לניהול תורים, לקוחות ודוחות עסקיים, הזמינה דרך האינטרנט.</p>
+      <p><strong>"המשתמש"</strong> - כל אדם או עסק הנרשם למערכת ו/או משתמש בשירותיה, לרבות בעלי מספרות, ספרים ולקוחות קצה.</p>
+      <p><strong>"תוכן משתמש"</strong> - כל מידע, נתונים או תכנים שהמשתמש מזין למערכת, לרבות פרטי לקוחות, תורים ופרטי עסק.</p>
+      <p><strong>"שירותים"</strong> - כלל השירותים המוצעים במסגרת המערכת, לרבות ניהול תורים, ניהול לקוחות, דוחות הכנסות, עמוד הזמנת תורים ועוד.</p>
+    </div>
+
+    <!-- 2. תנאי שימוש -->
+    <div class="section">
+      <h2><i class="fas fa-handshake"></i> 2. תנאי שימוש כלליים</h2>
+      <p>השימוש במערכת דניטק מותנה בהסכמתך לתנאי שימוש אלה. על ידי הרשמה למערכת או שימוש בה, הנך מאשר כי קראת, הבנת והסכמת לכל התנאים המפורטים במסמך זה.</p>
+      <p>החברה רשאית לעדכן תנאים אלה מעת לעת. שינויים מהותיים יפורסמו באמצעות הודעה במערכת או בדוא"ל. המשך השימוש במערכת לאחר עדכון התנאים מהווה הסכמה לתנאים המעודכנים.</p>
+      <p>המשתמש מתחייב להשתמש במערכת בהתאם לכל דין ולהימנע משימוש לא חוקי, פוגעני או מזיק.</p>
+    </div>
+
+    <!-- 3. הרשמה וחשבון -->
+    <div class="section">
+      <h2><i class="fas fa-user-plus"></i> 3. הרשמה וחשבון</h2>
+      <p>לצורך שימוש במערכת, נדרש ליצור חשבון באמצעות מסירת פרטים מדויקים ועדכניים, לרבות שם העסק, שם בעל העסק, טלפון, כתובת דוא"ל ופרטי התחברות.</p>
+      <p>המשתמש אחראי לשמירת סודיות פרטי ההתחברות שלו ולכל פעילות המתבצעת תחת חשבונו. יש להודיע לחברה מיידית על כל שימוש לא מורשה בחשבון.</p>
+      <p>החברה רשאית לסרב לרשום משתמש, להשעות או לבטל חשבון לפי שיקול דעתה, במקרים של הפרת תנאי שימוש אלה או שימוש לרעה במערכת.</p>
+      <p>כל חשבון מיועד לעסק בודד. שיתוף חשבון בין עסקים שונים אינו מורשה.</p>
+    </div>
+
+    <!-- 4. תשלומים -->
+    <div class="section">
+      <h2><i class="fas fa-credit-card"></i> 4. תשלומים</h2>
+      <p>המערכת מציעה תוכניות שונות, כולל תקופת ניסיון חינם. פרטי התוכניות, המחירים והתכונות הכלולות בכל תוכנית מפורטים בעמוד המחירים באתר.</p>
+      <p>התשלום מתבצע מראש על בסיס חודשי. המחירים כוללים מע"מ כדין, אלא אם צוין אחרת.</p>
+      <p>החברה רשאית לשנות את מחירי התוכניות בהודעה מוקדמת של 30 יום. שינוי מחיר לא יחול על תקופה שכבר שולמה.</p>
+      <p>במקרה של אי-תשלום, החברה רשאית להגביל את הגישה למערכת עד להסדרת התשלום.</p>
+    </div>
+
+    <!-- 5. קניין רוחני -->
+    <div class="section">
+      <h2><i class="fas fa-copyright"></i> 5. קניין רוחני</h2>
+      <p>כל הזכויות במערכת, לרבות קוד המקור, העיצוב, הלוגו, השם המסחרי וכל תוכן שנוצר על ידי החברה, שייכים לחברה בלבד ומוגנים בזכויות יוצרים ובחוקי קניין רוחני.</p>
+      <p>המשתמש מקבל רישיון שימוש מוגבל, לא בלעדי, שאינו ניתן להעברה, לשימוש במערכת בהתאם לתנאים אלה ולתוכנית שנרכשה.</p>
+      <p>אין להעתיק, לשכפל, להפיץ, לפרק או לבצע הנדסה לאחור של כל חלק מהמערכת.</p>
+      <p>תוכן המשתמש נשאר בבעלות המשתמש. המשתמש מעניק לחברה רישיון מוגבל לעשות שימוש בתוכן לצורך הפעלת השירות בלבד.</p>
+    </div>
+
+    <!-- 6. הגבלת אחריות -->
+    <div class="section">
+      <h2><i class="fas fa-shield-halved"></i> 6. הגבלת אחריות</h2>
+      <p>המערכת מסופקת "כמות שהיא" (AS IS). החברה עושה מאמצים סבירים לשמור על זמינות ותקינות המערכת, אך אינה מתחייבת לפעולה רציפה וללא תקלות.</p>
+      <p>החברה לא תישא באחריות לנזקים ישירים, עקיפים, מיוחדים או תוצאתיים הנובעים משימוש או חוסר יכולת שימוש במערכת, לרבות אובדן נתונים, אובדן הכנסות או הפסדים עסקיים.</p>
+      <p>בכל מקרה, אחריות החברה המצטברת לא תעלה על הסכום ששולם על ידי המשתמש בשלושת החודשים שקדמו לאירוע.</p>
+      <p>החברה אינה אחראית לתוכן שמזינים המשתמשים למערכת או לשימוש שנעשה בו.</p>
+    </div>
+
+    <!-- 7. ביטול ושינויים -->
+    <div class="section">
+      <h2><i class="fas fa-rotate-left"></i> 7. ביטול ושינויים</h2>
+      <p>המשתמש רשאי לבטל את המנוי בכל עת דרך הגדרות החשבון או בפנייה לשירות הלקוחות. הביטול ייכנס לתוקף בתום תקופת החיוב הנוכחית.</p>
+      <p>לאחר ביטול, נתוני המשתמש יישמרו למשך 30 יום לצורך גיבוי, ולאחר מכן יימחקו לצמיתות, בכפוף לחובות שמירת מידע על פי דין.</p>
+      <p>החברה רשאית לבטל חשבון משתמש בהודעה מוקדמת של 14 יום, למעט במקרים של הפרה חמורה של תנאי השימוש שבהם ניתן לבטל לאלתר.</p>
+      <p>במקרה של ביטול, המשתמש יהיה זכאי לייצא את נתוניו מהמערכת בפורמט סטנדרטי לפני סיום תקופת השמירה.</p>
+    </div>
+
+    <!-- 8. פרטיות -->
+    <div class="section">
+      <h2><i class="fas fa-lock"></i> 8. פרטיות</h2>
+      <p>החברה מכבדת את פרטיות המשתמשים ופועלת בהתאם לחוק הגנת הפרטיות, התשמ"א-1981 ולתקנות הגנת הפרטיות (אבטחת מידע), התשע"ז-2017.</p>
+      <p>המידע שנאסף משמש אך ורק לצורך הפעלת השירות ושיפורו. פירוט מלא על אופן איסוף, שמירת ושימוש במידע מופיע ב<a href="/privacy.html" style="color:var(--primary);font-weight:600">מדיניות הפרטיות</a> שלנו.</p>
+      <p>המשתמש אחראי לקבלת הסכמה מפורשת מלקוחות הקצה שלו לאיסוף ושמירת פרטיהם במערכת, בהתאם לדין החל.</p>
+    </div>
+
+    <!-- 9. סמכות שיפוט -->
+    <div class="section">
+      <h2><i class="fas fa-gavel"></i> 9. סמכות שיפוט ודין חל</h2>
+      <p>על תנאי שימוש אלה יחולו דיני מדינת ישראל בלבד.</p>
+      <p>סמכות השיפוט הבלעדית לכל עניין הנוגע לתנאים אלה או לשימוש במערכת מוקנית לבתי המשפט המוסמכים במחוז תל אביב-יפו.</p>
+      <p>הצדדים יעשו מאמץ לפתור כל מחלוקת באופן ידידותי לפני פנייה להליכים משפטיים.</p>
+    </div>
+
+    <!-- 10. יצירת קשר -->
+    <div class="section">
+      <h2><i class="fas fa-envelope"></i> 10. יצירת קשר</h2>
+      <p>לכל שאלה, בקשה או תלונה בנוגע לתנאי שימוש אלה, ניתן לפנות אלינו:</p>
+      <ul>
+        <li><strong>דוא"ל:</strong> <a href="mailto:daniel@danitech.co.il" style="color:var(--primary)">daniel@danitech.co.il</a></li>
+        <li><strong>חברה:</strong> דניטק - דניאל כספין</li>
+      </ul>
+      <p>נשתדל להשיב לכל פנייה בתוך 5 ימי עסקים.</p>
+    </div>
+  </main>
+
+  <footer class="page-footer">
+    <p>&copy; 2026 דניטק - דניאל כספין. כל הזכויות שמורות.</p>
+    <p style="margin-top:0.5rem">
+      <a href="/landing">דף הבית</a> &bull;
+      <a href="/privacy.html">מדיניות פרטיות</a> &bull;
+      <a href="/accessibility.html">הצהרת נגישות</a>
+    </p>
+  </footer>
+
+</body>
+</html>

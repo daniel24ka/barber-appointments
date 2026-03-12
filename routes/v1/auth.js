@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { getDb, createTenant } = require('../../db/schema');
 const { generateToken, authenticateToken } = require('../../middleware/auth');
+const { sendWelcomeEmail } = require('../../services/email');
 
 // Login
 router.post('/login', async (req, res) => {
@@ -144,6 +145,13 @@ router.post('/register', async (req, res) => {
       booking_url: `/book/${tenant.slug}`,
       username: admin_username
     });
+
+    // Send welcome email (fire-and-forget)
+    if (owner_email) {
+      const loginUrl = `${req.protocol}://${req.get('host')}/login`;
+      sendWelcomeEmail(owner_email, shop_name, loginUrl)
+        .catch(err => console.error('[Email] Welcome email failed:', err.message));
+    }
   } catch (err) {
     console.error('Registration error:', err);
     if (err.code === '23505') {

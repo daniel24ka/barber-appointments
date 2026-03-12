@@ -6,8 +6,17 @@
   <meta name="theme-color" content="#4F46E5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>הזמנת תור</title>
+  <link rel="manifest" href="/manifest.json">
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <!-- Google Analytics - Replace GA_MEASUREMENT_ID with your actual ID -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'GA_MEASUREMENT_ID');
+  </script>
   <style>
     :root {
       --primary: #4F46E5;
@@ -214,7 +223,7 @@
   <a href="#bookingContent" class="skip-link">דלג לתוכן</a>
 
   <header class="booking-header" role="banner">
-    <div class="logo"><i class="fas fa-cut"></i></div>
+    <div class="logo" id="shopLogo"><i class="fas fa-cut"></i></div>
     <h1 id="shopTitle">הזמנת תור</h1>
     <p>בחרו ספר, תאריך ושעה - וזהו!</p>
     <div class="shop-details" id="shopDetails"></div>
@@ -361,6 +370,15 @@ const state = {
     // Apply tenant branding
     if (info.primary_color && info.primary_color !== '#4F46E5') {
       document.documentElement.style.setProperty('--primary', info.primary_color);
+      // Derive light and dark variants
+      const c = info.primary_color;
+      document.documentElement.style.setProperty('--primary-dark', c);
+      document.documentElement.style.setProperty('--primary-light', c);
+    }
+    // Display logo if available
+    if (info.logo_url) {
+      const logoEl = document.getElementById('shopLogo');
+      logoEl.innerHTML = `<img src="${info.logo_url}" alt="לוגו" style="max-height:60px;max-width:120px;object-fit:contain">`;
     }
     const details = [];
     if (info.phone) details.push(`<i class="fas fa-phone"></i> ${info.phone}`);

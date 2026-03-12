@@ -4,9 +4,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const fs = require('fs');
 const rateLimit = require('express-rate-limit');
+const cron = require('node-cron');
 const { initDatabase } = require('./db/schema');
 const { resolveTenantBySlug } = require('./middleware/tenant');
+const { processReminders } = require('./services/reminders');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -107,6 +110,9 @@ app.use('/api/settings', require('./routes/v1/settings'));
 app.use('/api/export', require('./routes/v1/export'));
 app.use('/api/consents', require('./routes/v1/consents'));
 app.use('/api/tenants', require('./routes/v1/tenants'));
+app.use('/api/upload', require('./routes/v1/upload'));
+app.use('/api/payments', require('./routes/v1/payments'));
+app.use('/api/reminders', require('./routes/v1/reminders'));
 
 // Serve booking page for tenant slug
 app.get('/book/:slug', (req, res) => {
@@ -150,12 +156,27 @@ function validateEnv() {
   }
 }
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'public', 'uploads', 'logos');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Init
 validateEnv();
 initDatabase().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`DaniTech Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Schedule daily reminders at 18:00 (evening before appointment day) - production only
+    if (process.env.NODE_ENV === 'production') {
+      cron.schedule('0 18 * * *', () => {
+        console.log(`[Cron] Running daily reminders at ${new Date().toISOString()}`);
+        processReminders().catch(err => console.error('[Cron] Reminder error:', err));
+      }, { timezone: 'Asia/Jerusalem' });
+      console.log('[Cron] Daily reminders scheduled at 18:00 (Asia/Jerusalem)');
+    }
   });
 }).catch(err => {
   console.error('Failed to initialize database:', err);

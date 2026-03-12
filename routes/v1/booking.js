@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../../db/schema');
+const { sendBookingConfirmation } = require('../../services/email');
 
 // All booking routes expect req.tenantId to be set by the tenant middleware in server.js
 
@@ -190,6 +191,22 @@ router.post('/book', async (req, res) => {
         service: service.name
       }
     });
+
+    // Send booking confirmation email (fire-and-forget)
+    if (client.email || req.body.client_email) {
+      const emailTo = client.email || req.body.client_email;
+      // Fetch shop name for the email
+      const shopSetting = await db.prepare("SELECT value FROM settings WHERE key = 'shop_name' AND tenant_id = ?").get(tid);
+      sendBookingConfirmation(emailTo, {
+        clientName: client_name,
+        barberName: barber.name,
+        date,
+        time: start_time,
+        serviceName: service.name,
+        shopName: shopSetting?.value || 'המספרה',
+        price: service.price
+      }).catch(err => console.error('[Email] Booking confirmation failed:', err.message));
+    }
   } catch (err) {
     console.error('Public booking error:', err);
     res.status(500).json({ error: 'שגיאה בהזמנת התור' });
