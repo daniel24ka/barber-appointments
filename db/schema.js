@@ -270,6 +270,14 @@ async function initDatabase() {
     await seedData();
   }
 
+  // Update role CHECK constraint to include super_admin (existing DB may only allow admin/barber/client)
+  try {
+    await pool.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
+    await pool.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('super_admin','admin','barber','client'))");
+  } catch(e) {
+    console.log('Role constraint update note:', e.message);
+  }
+
   // Ensure super admin exists
   const superAdmin = await db.prepare("SELECT id FROM users WHERE role = 'super_admin' LIMIT 1").get();
   if (!superAdmin) {
