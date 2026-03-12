@@ -458,8 +458,9 @@ function enterTenantView(tenantId, tenantName) {
   if (!banner) {
     banner = document.createElement('div');
     banner.id = 'tenantViewBanner';
-    banner.style.cssText = 'background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:0.9rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.15)';
-    document.getElementById('appContainer').prepend(banner);
+    banner.style.cssText = 'background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:0.9rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.15);width:100%';
+    const mainContent = document.querySelector('.main-content');
+    mainContent.insertBefore(banner, mainContent.firstChild);
   }
   banner.innerHTML = `
     <span><i class="fas fa-eye"></i> צופה בעסק: <strong>${escHtml(tenantName)}</strong></span>
