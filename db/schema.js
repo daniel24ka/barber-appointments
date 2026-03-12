@@ -280,7 +280,7 @@ function seedData(db) {
     ['shop_address', 'רחוב הרצל 10, תל אביב'],
     ['open_time', '09:00'],
     ['close_time', '20:00'],
-    ['slot_interval', '15'],
+    ['slot_interval', '30'],
     ['allow_self_booking', 'false'],
   ];
   for (const s of settings) {
