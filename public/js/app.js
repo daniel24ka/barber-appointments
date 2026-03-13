@@ -117,11 +117,13 @@ async function showApp() {
         const tenantsLink = document.createElement('a');
         tenantsLink.href = '#'; tenantsLink.className = 'more-menu-item'; tenantsLink.dataset.page = 'tenants';
         tenantsLink.innerHTML = '<i class="fas fa-store"></i> ניהול עסקים';
+        tenantsLink.addEventListener('click', function(e) { e.preventDefault(); navigate('tenants'); });
         settingsItem.before(tenantsLink);
 
         const auditLink = document.createElement('a');
         auditLink.href = '#'; auditLink.className = 'more-menu-item'; auditLink.dataset.page = 'auditLog';
         auditLink.innerHTML = '<i class="fas fa-history"></i> לוג פעולות';
+        auditLink.addEventListener('click', function(e) { e.preventDefault(); navigate('auditLog'); });
         settingsItem.before(auditLink);
       }
     }
