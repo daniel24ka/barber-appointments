@@ -247,6 +247,19 @@ async function initDatabase() {
     )
   `);
 
+  // Admin audit log for super admin actions
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+      id SERIAL PRIMARY KEY,
+      admin_user_id INTEGER REFERENCES users(id),
+      action TEXT NOT NULL,
+      target_type TEXT,
+      target_id INTEGER,
+      details TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // === Migration: add tenant_id to existing tables if missing ===
   await migrateMultiTenant();
 

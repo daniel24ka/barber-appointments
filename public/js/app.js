@@ -101,7 +101,7 @@ async function showApp() {
       if (label) label.textContent = 'ניהול';
     }
 
-    // Configure more menu for super admin - only settings & logout
+    // Configure more menu for super admin
     const moreMenuSheet = document.querySelector('.more-menu-sheet');
     if (moreMenuSheet) {
       // Hide tenant-specific menu items
@@ -111,6 +111,19 @@ async function showApp() {
           item.style.display = 'none';
         }
       });
+      // Add super admin menu items
+      const settingsItem = moreMenuSheet.querySelector('[data-page="settings"]');
+      if (settingsItem && !moreMenuSheet.querySelector('[data-page="tenants"]')) {
+        const tenantsLink = document.createElement('a');
+        tenantsLink.href = '#'; tenantsLink.className = 'more-menu-item'; tenantsLink.dataset.page = 'tenants';
+        tenantsLink.innerHTML = '<i class="fas fa-store"></i> ניהול עסקים';
+        settingsItem.before(tenantsLink);
+
+        const auditLink = document.createElement('a');
+        auditLink.href = '#'; auditLink.className = 'more-menu-item'; auditLink.dataset.page = 'auditLog';
+        auditLink.innerHTML = '<i class="fas fa-history"></i> לוג פעולות';
+        settingsItem.before(auditLink);
+      }
     }
 
     // Set shop name to DaniTech
@@ -240,7 +253,7 @@ function navigate(page) {
     dashboard: 'לוח בקרה', calendar: 'יומן תורים', appointments: 'רשימת תורים',
     newAppointment: 'תור חדש', clients: 'לקוחות', barbers: 'ספרים',
     services: 'שירותים', reports: 'דוחות הכנסות', settings: 'הגדרות',
-    tenants: 'ניהול עסקים'
+    tenants: 'ניהול עסקים', auditLog: 'לוג פעולות'
   };
   document.getElementById('pageTitle').textContent = titles[page] || '';
 
@@ -248,7 +261,7 @@ function navigate(page) {
     dashboard: renderDashboard, calendar: renderCalendar, appointments: renderAppointments,
     newAppointment: renderNewAppointment, clients: renderClients, barbers: renderBarbers,
     services: renderServices, reports: renderReports, settings: renderSettings,
-    tenants: renderTenants
+    tenants: renderTenants, auditLog: renderAuditLog
   };
   if (renderers[page]) renderers[page]();
 
@@ -386,16 +399,62 @@ async function renderSuperAdminDashboard() {
   area.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>טוען נתוני מערכת...</h3></div>';
 
   try {
-    const stats = await api('/dashboard/super-stats');
+    const [stats, health] = await Promise.all([
+      api('/dashboard/super-stats'),
+      api('/tenants/system/health')
+    ]);
+
+    const PLAN_HE = { trial: 'ניסיון', basic: 'בסיסי', premium: 'פרימיום' };
+    const PLAN_COLORS = { trial: '#6B7280', basic: '#10B981', premium: '#F59E0B' };
+
+    // Revenue chart bars
+    const maxRev = Math.max(...health.revenueTrend.map(r => r.revenue), 1);
+    const revenueChartHtml = health.revenueTrend.map(r => {
+      const pct = Math.max((r.revenue / maxRev) * 100, 4);
+      const monthLabel = r.month.split('-')[1] + '/' + r.month.split('-')[0].slice(2);
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="font-size:.72rem;font-weight:600">₪${r.revenue}</span>
+        <div style="width:100%;max-width:40px;background:var(--primary);border-radius:4px 4px 0 0;height:${pct}px;min-height:4px;transition:height .3s"></div>
+        <span style="font-size:.7rem;color:var(--text-secondary)">${monthLabel}</span>
+      </div>`;
+    }).join('');
+
+    // Alerts section
+    let alertsHtml = '';
+    if (health.expiredTrials.length) {
+      alertsHtml += health.expiredTrials.map(t => `
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;border-bottom:1px solid var(--border)">
+          <i class="fas fa-exclamation-circle" style="color:#EF4444;font-size:1.1rem"></i>
+          <div style="flex:1"><strong>${escHtml(t.name)}</strong><div style="font-size:.78rem;color:var(--text-secondary)">תקופת ניסיון פגה · ${escHtml(t.owner_name || '')}</div></div>
+          <button class="btn btn-sm btn-outline" onclick="editTenant(${t.id})" title="שדרג תוכנית"><i class="fas fa-arrow-up"></i></button>
+        </div>`).join('');
+    }
+    if (health.expiringTrials.length) {
+      alertsHtml += health.expiringTrials.map(t => {
+        const daysLeft = Math.ceil((new Date(t.trial_ends_at) - new Date()) / (1000*60*60*24));
+        return `<div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;border-bottom:1px solid var(--border)">
+          <i class="fas fa-hourglass-half" style="color:#F59E0B;font-size:1.1rem"></i>
+          <div style="flex:1"><strong>${escHtml(t.name)}</strong><div style="font-size:.78rem;color:var(--text-secondary)">ניסיון פג בעוד ${daysLeft} ימים · ${escHtml(t.owner_name || '')} ${t.owner_phone ? `· <a href="tel:${escAttr(t.owner_phone)}">${escHtml(t.owner_phone)}</a>` : ''}</div></div>
+          <button class="btn btn-sm btn-outline" onclick="editTenant(${t.id})"><i class="fas fa-edit"></i></button>
+        </div>`;
+      }).join('');
+    }
+    if (!alertsHtml) alertsHtml = '<div class="empty-state" style="padding:1rem"><i class="fas fa-check-circle" style="color:#10B981"></i><small>אין התראות פעילות</small></div>';
 
     area.innerHTML = `
-      <div style="margin-bottom:1.5rem">
-        <h2 style="font-size:1.4rem;font-weight:700;margin:0"><i class="fas fa-building" style="color:var(--primary)"></i> לוח בקרה - DaniTech</h2>
-        <p style="color:var(--text-secondary);margin:0.25rem 0 0">סקירה כללית של כל העסקים במערכת</p>
+      <div style="margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+        <div>
+          <h2 style="font-size:1.3rem;font-weight:700;margin:0"><i class="fas fa-building" style="color:var(--primary)"></i> DaniTech - לוח בקרה</h2>
+          <p style="color:var(--text-secondary);margin:0.15rem 0 0;font-size:.85rem">סקירה כללית של כל העסקים במערכת</p>
+        </div>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn btn-sm btn-primary" onclick="showCreateTenantModal()"><i class="fas fa-plus"></i> עסק חדש</button>
+          <button class="btn btn-sm btn-outline" onclick="renderSuperAdminDashboard()"><i class="fas fa-sync"></i></button>
+        </div>
       </div>
 
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-store"></i></div><div class="stat-info"><h4>עסקים פעילים</h4><div class="stat-value">${stats.activeTenants} <small style="font-size:0.7rem;color:var(--text-secondary)">/ ${stats.totalTenants}</small></div></div></div>
+        <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-store"></i></div><div class="stat-info"><h4>עסקים פעילים</h4><div class="stat-value">${stats.activeTenants}<small style="font-size:.65rem;color:var(--text-secondary)"> / ${stats.totalTenants}</small></div></div></div>
         <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h4>בתקופת ניסיון</h4><div class="stat-value">${stats.trialTenants}</div></div></div>
         <div class="stat-card"><div class="stat-icon green"><i class="fas fa-users"></i></div><div class="stat-info"><h4>סה"כ לקוחות</h4><div class="stat-value">${stats.totalClients}</div></div></div>
         <div class="stat-card"><div class="stat-icon cyan"><i class="fas fa-user-tie"></i></div><div class="stat-info"><h4>סה"כ ספרים</h4><div class="stat-value">${stats.totalBarbers}</div></div></div>
@@ -403,37 +462,47 @@ async function renderSuperAdminDashboard() {
         <div class="stat-card"><div class="stat-icon green"><i class="fas fa-shekel-sign"></i></div><div class="stat-info"><h4>הכנסות החודש</h4><div class="stat-value">₪${stats.monthRevenue}</div></div></div>
       </div>
 
-      <div class="card" style="margin-top:1.25rem">
+      <div class="dashboard-grid" style="margin-top:1rem">
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-bell" style="color:#F59E0B"></i> התראות מערכת</h3></div>
+          ${alertsHtml}
+        </div>
+        <div class="card">
+          <div class="card-header"><h3><i class="fas fa-chart-bar" style="color:var(--primary)"></i> הכנסות - 6 חודשים</h3></div>
+          <div style="display:flex;align-items:flex-end;gap:6px;padding:1rem .75rem;height:140px">${revenueChartHtml}</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
         <div class="card-header">
           <h3><i class="fas fa-store"></i> רשימת עסקים</h3>
-          <button class="btn btn-sm btn-primary" onclick="navigate('tenants')"><i class="fas fa-cog"></i> ניהול מלא</button>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <input type="text" id="tenantSearchInput" placeholder="חפש עסק..." oninput="filterSuperTenantTable()" style="padding:.35rem .65rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;font-family:var(--font);width:140px">
+            <button class="btn btn-sm btn-outline" onclick="navigate('tenants')"><i class="fas fa-cog"></i> ניהול</button>
+          </div>
         </div>
         <div class="table-container">
-          <table>
-            <thead><tr><th>עסק</th><th>תוכנית</th><th>לקוחות</th><th>ספרים</th><th>תורים היום</th><th>הכנסות החודש</th><th>סטטוס</th><th>פעולות</th></tr></thead>
+          <table id="superTenantTable">
+            <thead><tr><th>עסק</th><th>תוכנית</th><th>לקוחות</th><th>ספרים</th><th>תורים</th><th>הכנסות</th><th>סטטוס</th><th>פעולות</th></tr></thead>
             <tbody>
               ${stats.tenants && stats.tenants.length ? stats.tenants.map(t => {
-                const planLabels = { trial: 'ניסיון', basic: 'בסיסי', premium: 'פרימיום' };
-                const planColors = { trial: '#6B7280', basic: '#10B981', premium: '#F59E0B' };
                 const isTrialExpired = t.plan === 'trial' && t.trial_ends_at && new Date(t.trial_ends_at) < new Date();
-                return `<tr>
-                  <td>
-                    <strong>${escHtml(t.name)}</strong>
-                    <div style="font-size:.78rem;color:var(--text-secondary)">${escHtml(t.owner_name || '')} · <code style="font-size:.72rem">${escHtml(t.slug)}</code></div>
-                  </td>
-                  <td><span class="badge" style="background:${planColors[t.plan] || '#6B7280'};color:#fff">${planLabels[t.plan] || t.plan}</span></td>
+                let statusHtml = t.active ?
+                  (isTrialExpired ? '<span style="color:#F59E0B"><i class="fas fa-exclamation-triangle"></i> פג</span>' : '<span style="color:#10B981"><i class="fas fa-check-circle"></i> פעיל</span>')
+                  : '<span style="color:#EF4444"><i class="fas fa-times-circle"></i> מושבת</span>';
+                return `<tr data-name="${escAttr(t.name)} ${escAttr(t.owner_name || '')} ${escAttr(t.slug)}">
+                  <td><strong>${escHtml(t.name)}</strong><div style="font-size:.75rem;color:var(--text-secondary)">${escHtml(t.owner_name || '')} · <code style="font-size:.7rem">${escHtml(t.slug)}</code></div></td>
+                  <td><span class="badge" style="background:${PLAN_COLORS[t.plan] || '#6B7280'};color:#fff;font-size:.7rem">${PLAN_HE[t.plan] || t.plan}</span></td>
                   <td>${t.client_count || 0}</td>
                   <td>${t.barber_count || 0}</td>
                   <td>${t.today_appointments || 0}</td>
                   <td>₪${t.month_revenue || 0}</td>
-                  <td>${t.active ?
-                    (isTrialExpired ? '<span style="color:#F59E0B"><i class="fas fa-exclamation-triangle"></i> ניסיון פג</span>' : '<span style="color:#10B981"><i class="fas fa-check-circle"></i> פעיל</span>')
-                    : '<span style="color:#EF4444"><i class="fas fa-times-circle"></i> מושבת</span>'}</td>
+                  <td>${statusHtml}</td>
                   <td>
                     <div class="btn-group">
-                      <button class="btn btn-sm btn-outline" onclick="enterTenantView(${t.id}, '${escAttr(t.name)}')" title="כניסה לעסק"><i class="fas fa-sign-in-alt"></i></button>
+                      <button class="btn btn-sm btn-outline" onclick="enterTenantView(${t.id},'${escAttr(t.name)}')" title="כניסה"><i class="fas fa-sign-in-alt"></i></button>
+                      <button class="btn btn-sm btn-outline" onclick="showTenantDetails(${t.id})" title="פרטים"><i class="fas fa-info-circle"></i></button>
                       <button class="btn btn-sm btn-outline" onclick="editTenant(${t.id})" title="עריכה"><i class="fas fa-edit"></i></button>
-                      <a href="/book/${escAttr(t.slug)}" target="_blank" class="btn btn-sm btn-outline" title="דף הזמנה"><i class="fas fa-external-link-alt"></i></a>
                     </div>
                   </td>
                 </tr>`;
@@ -442,10 +511,190 @@ async function renderSuperAdminDashboard() {
           </table>
         </div>
       </div>
+
+      ${health.recentRegistrations.length ? `
+      <div class="card" style="margin-top:1rem">
+        <div class="card-header"><h3><i class="fas fa-user-plus" style="color:#10B981"></i> רישומים אחרונים (30 יום)</h3></div>
+        ${health.recentRegistrations.map(t => `
+          <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;border-bottom:1px solid var(--border)">
+            <i class="fas fa-store" style="color:var(--primary)"></i>
+            <div style="flex:1"><strong>${escHtml(t.name)}</strong> <span class="badge" style="background:${PLAN_COLORS[t.plan] || '#6B7280'};color:#fff;font-size:.65rem">${PLAN_HE[t.plan] || t.plan}</span>
+              <div style="font-size:.78rem;color:var(--text-secondary)">${escHtml(t.owner_name || '')} · ${formatDate(t.created_at)}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>` : ''}
     `;
   } catch(e) {
     area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>שגיאה בטעינת נתוני מערכת</h3><p>${escHtml(e.message)}</p></div>`;
   }
+}
+
+// Filter tenants in super admin dashboard table
+function filterSuperTenantTable() {
+  const q = (document.getElementById('tenantSearchInput')?.value || '').toLowerCase();
+  document.querySelectorAll('#superTenantTable tbody tr').forEach(row => {
+    const name = (row.dataset.name || '').toLowerCase();
+    row.style.display = !q || name.includes(q) ? '' : 'none';
+  });
+}
+
+// Show detailed tenant info modal with user management
+async function showTenantDetails(tenantId) {
+  try {
+    const [tenant, users] = await Promise.all([
+      api(`/tenants/${tenantId}`),
+      api(`/tenants/${tenantId}/users`)
+    ]);
+
+    const PLAN_HE = { trial: 'ניסיון', basic: 'בסיסי', premium: 'פרימיום' };
+    const ROLE_HE = { admin: 'מנהל', barber: 'ספר', super_admin: 'סופר אדמין' };
+
+    const trialInfo = tenant.plan === 'trial' && tenant.trial_ends_at
+      ? `<div style="margin:.75rem 0;padding:.6rem;background:#FEF3C7;border-radius:var(--radius-sm);font-size:.85rem">
+          <i class="fas fa-hourglass-half" style="color:#D97706"></i> <strong>ניסיון פג:</strong> ${formatDate(tenant.trial_ends_at)}
+          <button class="btn btn-sm" onclick="showSetTrialModal(${tenantId})" style="margin-right:.5rem"><i class="fas fa-calendar"></i> שנה תאריך</button>
+        </div>` : '';
+
+    openModal(`${escHtml(tenant.name)} - פרטי עסק`, `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem">
+        <div style="padding:.6rem;background:var(--bg);border-radius:var(--radius-sm)"><small style="color:var(--text-secondary)">בעלים</small><div style="font-weight:600">${escHtml(tenant.owner_name || '-')}</div></div>
+        <div style="padding:.6rem;background:var(--bg);border-radius:var(--radius-sm)"><small style="color:var(--text-secondary)">טלפון</small><div style="font-weight:600">${tenant.owner_phone ? `<a href="tel:${escAttr(tenant.owner_phone)}">${escHtml(tenant.owner_phone)}</a>` : '-'}</div></div>
+        <div style="padding:.6rem;background:var(--bg);border-radius:var(--radius-sm)"><small style="color:var(--text-secondary)">אימייל</small><div style="font-weight:600">${escHtml(tenant.owner_email || '-')}</div></div>
+        <div style="padding:.6rem;background:var(--bg);border-radius:var(--radius-sm)"><small style="color:var(--text-secondary)">תוכנית</small><div style="font-weight:600">${PLAN_HE[tenant.plan] || tenant.plan}</div></div>
+        <div style="padding:.6rem;background:var(--bg);border-radius:var(--radius-sm)"><small style="color:var(--text-secondary)">Slug</small><div style="font-weight:600;direction:ltr">${escHtml(tenant.slug)}</div></div>
+        <div style="padding:.6rem;background:var(--bg);border-radius:var(--radius-sm)"><small style="color:var(--text-secondary)">נוצר</small><div style="font-weight:600">${formatDate(tenant.created_at)}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:1rem">
+        <div style="text-align:center;padding:.5rem;background:var(--bg);border-radius:var(--radius-sm)"><div style="font-size:1.3rem;font-weight:700;color:var(--primary)">${tenant.stats.clients}</div><small>לקוחות</small></div>
+        <div style="text-align:center;padding:.5rem;background:var(--bg);border-radius:var(--radius-sm)"><div style="font-size:1.3rem;font-weight:700;color:var(--primary)">${tenant.stats.appointments}</div><small>תורים</small></div>
+        <div style="text-align:center;padding:.5rem;background:var(--bg);border-radius:var(--radius-sm)"><div style="font-size:1.3rem;font-weight:700;color:var(--primary)">₪${tenant.stats.monthRevenue}</div><small>הכנסות</small></div>
+      </div>
+      ${trialInfo}
+      <div style="margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between">
+        <h4 style="margin:0"><i class="fas fa-users-cog"></i> משתמשים (${users.length})</h4>
+        <button class="btn btn-sm btn-primary" onclick="closeModal();showAddUserModal(${tenantId})"><i class="fas fa-user-plus"></i> הוסף</button>
+      </div>
+      ${users.map(u => `
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .4rem;border-bottom:1px solid var(--border)">
+          <div style="width:32px;height:32px;border-radius:50%;background:${u.active?'var(--primary)':'#9CA3AF'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700">${getInitials(u.display_name)}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.9rem">${escHtml(u.display_name)} ${!u.active ? '<span style="color:#EF4444;font-size:.7rem">(מושבת)</span>' : ''}</div>
+            <div style="font-size:.75rem;color:var(--text-secondary)"><code>${escHtml(u.username)}</code> · ${ROLE_HE[u.role] || u.role}</div>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline" onclick="closeModal();showResetPasswordModal(${tenantId},${u.id},'${escAttr(u.display_name)}')" title="איפוס סיסמה"><i class="fas fa-key"></i></button>
+            <button class="btn btn-sm btn-outline" onclick="toggleTenantUser(${tenantId},${u.id})" title="${u.active ? 'השבת' : 'הפעל'}"><i class="fas fa-${u.active ? 'ban' : 'check'}"></i></button>
+          </div>
+        </div>
+      `).join('')}
+      <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <a href="/book/${escAttr(tenant.slug)}" target="_blank" class="btn btn-sm btn-outline"><i class="fas fa-external-link-alt"></i> דף הזמנה</a>
+        <button class="btn btn-sm btn-outline" onclick="closeModal();enterTenantView(${tenantId},'${escAttr(tenant.name)}')"><i class="fas fa-sign-in-alt"></i> כניסה לעסק</button>
+        <button class="btn btn-sm btn-outline" onclick="closeModal();editTenant(${tenantId})"><i class="fas fa-edit"></i> ערוך פרטים</button>
+      </div>
+    `);
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// Reset password modal
+function showResetPasswordModal(tenantId, userId, userName) {
+  openModal(`איפוס סיסמה - ${escHtml(userName)}`, `
+    <p>הזן סיסמה חדשה עבור <strong>${escHtml(userName)}</strong></p>
+    <div class="form-group"><label>סיסמה חדשה</label><input type="password" id="resetPassInput" placeholder="לפחות 6 תווים" minlength="6"></div>
+    <div class="form-group"><label>אישור סיסמה</label><input type="password" id="resetPassConfirm" placeholder="הזן שוב"></div>
+    <button class="btn btn-primary" onclick="doResetPassword(${tenantId},${userId})"><i class="fas fa-key"></i> אפס סיסמה</button>
+  `);
+}
+
+async function doResetPassword(tenantId, userId) {
+  const pass = document.getElementById('resetPassInput').value;
+  const confirm = document.getElementById('resetPassConfirm').value;
+  if (pass.length < 6) return toast('הסיסמה חייבת להכיל לפחות 6 תווים', 'error');
+  if (pass !== confirm) return toast('הסיסמאות לא תואמות', 'error');
+  try {
+    await api(`/tenants/${tenantId}/users/${userId}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword: pass }) });
+    toast('הסיסמה אופסה בהצלחה');
+    closeModal();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Toggle user active
+async function toggleTenantUser(tenantId, userId) {
+  try {
+    const result = await api(`/tenants/${tenantId}/users/${userId}/toggle-active`, { method: 'POST' });
+    toast(result.message);
+    showTenantDetails(tenantId);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Add user to tenant modal
+function showAddUserModal(tenantId) {
+  openModal('הוסף משתמש לעסק', `
+    <div class="form-group"><label>שם תצוגה</label><input type="text" id="newUserDisplay" placeholder="שם מלא"></div>
+    <div class="form-group"><label>שם משתמש (באנגלית)</label><input type="text" id="newUserUsername" placeholder="username" dir="ltr"></div>
+    <div class="form-group"><label>סיסמה</label><input type="password" id="newUserPassword" placeholder="לפחות 6 תווים"></div>
+    <div class="form-group"><label>תפקיד</label>
+      <select id="newUserRole" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font)">
+        <option value="admin">מנהל</option>
+        <option value="barber">ספר</option>
+      </select>
+    </div>
+    <div class="form-group"><label>אימייל (אופציונלי)</label><input type="email" id="newUserEmail" dir="ltr"></div>
+    <div class="form-group"><label>טלפון (אופציונלי)</label><input type="tel" id="newUserPhone" dir="ltr"></div>
+    <button class="btn btn-primary" onclick="doAddUser(${tenantId})"><i class="fas fa-user-plus"></i> צור משתמש</button>
+  `);
+}
+
+async function doAddUser(tenantId) {
+  const data = {
+    display_name: document.getElementById('newUserDisplay').value.trim(),
+    username: document.getElementById('newUserUsername').value.trim(),
+    password: document.getElementById('newUserPassword').value,
+    role: document.getElementById('newUserRole').value,
+    email: document.getElementById('newUserEmail').value.trim(),
+    phone: document.getElementById('newUserPhone').value.trim()
+  };
+  if (!data.display_name || !data.username || !data.password) return toast('נא למלא את כל שדות החובה', 'error');
+  if (data.password.length < 6) return toast('הסיסמה חייבת להכיל לפחות 6 תווים', 'error');
+  try {
+    await api(`/tenants/${tenantId}/users`, { method: 'POST', body: JSON.stringify(data) });
+    toast('המשתמש נוצר בהצלחה');
+    closeModal();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// Set trial modal
+function showSetTrialModal(tenantId) {
+  const defaultDate = new Date(); defaultDate.setDate(defaultDate.getDate() + 14);
+  const defStr = dateStr(defaultDate);
+  openModal('עדכון תקופת ניסיון', `
+    <div class="form-group"><label>תאריך סיום ניסיון</label><input type="date" id="trialEndDate" value="${defStr}"></div>
+    <button class="btn btn-primary" onclick="doSetTrial(${tenantId})"><i class="fas fa-calendar-check"></i> עדכן</button>
+    <button class="btn btn-outline" onclick="doRemoveTrial(${tenantId})" style="margin-right:.5rem"><i class="fas fa-infinity"></i> הסר הגבלה</button>
+  `);
+}
+
+async function doSetTrial(tenantId) {
+  const date = document.getElementById('trialEndDate').value;
+  if (!date) return toast('נא לבחור תאריך', 'error');
+  try {
+    await api(`/tenants/${tenantId}/set-trial`, { method: 'POST', body: JSON.stringify({ trial_ends_at: date + 'T23:59:59' }) });
+    toast('תקופת הניסיון עודכנה');
+    closeModal();
+    renderSuperAdminDashboard();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function doRemoveTrial(tenantId) {
+  try {
+    await api(`/tenants/${tenantId}/set-trial`, { method: 'POST', body: JSON.stringify({ trial_ends_at: null }) });
+    toast('הגבלת הניסיון הוסרה');
+    closeModal();
+    renderSuperAdminDashboard();
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 // Enter a specific tenant's view as super admin
@@ -2161,6 +2410,56 @@ async function saveTenant(id) {
     await api(`/tenants/${id}`, { method: 'PUT', body: JSON.stringify(data) });
     toast('העסק עודכן בהצלחה');
     closeModal();
-    renderTenants();
+    if (App.currentPage === 'tenants') renderTenants();
+    else renderSuperAdminDashboard();
   } catch (err) { toast(err.message, 'error'); }
+}
+
+// === Audit Log ===
+async function renderAuditLog() {
+  if (App.user.role !== 'super_admin') { navigate('dashboard'); return; }
+  const area = document.getElementById('contentArea');
+  area.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>טוען...</h3></div>';
+
+  try {
+    const logs = await api('/tenants/system/audit-log?limit=100');
+    const ACTION_HE = {
+      reset_password: 'איפוס סיסמה', activate_user: 'הפעלת משתמש', deactivate_user: 'השבתת משתמש',
+      create_user: 'יצירת משתמש', update_trial: 'עדכון ניסיון', create_tenant: 'יצירת עסק',
+      update_tenant: 'עדכון עסק', deactivate_tenant: 'השבתת עסק'
+    };
+    const ACTION_ICONS = {
+      reset_password: 'key', activate_user: 'check-circle', deactivate_user: 'ban',
+      create_user: 'user-plus', update_trial: 'calendar', create_tenant: 'store',
+      update_tenant: 'edit', deactivate_tenant: 'times-circle'
+    };
+    const ACTION_COLORS = {
+      reset_password: '#F59E0B', activate_user: '#10B981', deactivate_user: '#EF4444',
+      create_user: '#4F46E5', update_trial: '#6B7280', create_tenant: '#10B981',
+      update_tenant: '#4F46E5', deactivate_tenant: '#EF4444'
+    };
+
+    area.innerHTML = `
+      <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
+        <h3 style="margin:0"><i class="fas fa-history" style="color:var(--primary)"></i> לוג פעולות מערכת</h3>
+        <button class="btn btn-sm btn-outline" onclick="renderAuditLog()"><i class="fas fa-sync"></i> רענן</button>
+      </div>
+      ${logs.length ? `<div class="card">
+        ${logs.map(l => {
+          const d = new Date(l.created_at);
+          const timeStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          return `<div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;border-bottom:1px solid var(--border)">
+            <i class="fas fa-${ACTION_ICONS[l.action] || 'circle'}" style="color:${ACTION_COLORS[l.action] || '#6B7280'};font-size:1rem;width:1.2rem;text-align:center"></i>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:.88rem">${ACTION_HE[l.action] || l.action}</div>
+              <div style="font-size:.76rem;color:var(--text-secondary)">${escHtml(l.details || '')} · ${escHtml(l.admin_name || 'מערכת')}</div>
+            </div>
+            <span style="font-size:.72rem;color:var(--text-secondary);white-space:nowrap">${timeStr}</span>
+          </div>`;
+        }).join('')}
+      </div>` : '<div class="empty-state"><i class="fas fa-check-circle" style="color:#10B981"></i><h3>אין פעולות מתועדות</h3></div>'}
+    `;
+  } catch(e) {
+    area.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>שגיאה</h3><p>${escHtml(e.message)}</p></div>`;
+  }
 }
