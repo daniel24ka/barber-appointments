@@ -1487,7 +1487,7 @@ async function renderBarbers() {
             <div class="info-card-row"><span class="info-label">טלפון:</span> ${b.phone || '-'}</div>
             <div class="info-card-row"><span class="info-label">התמחות:</span> ${b.specialty || '-'}</div>
             <div class="info-card-row"><span class="info-label">שעות:</span> ${b.work_start_time}-${b.work_end_time}</div>
-            <div class="info-card-row"><span class="info-label">ימי עבודה:</span> ${b.work_days.split(',').map(d=>DAYS_HE[d]).join(', ')}</div>
+            <div class="info-card-row"><span class="info-label">ימי עבודה:</span> ${(b.work_days||'0,1,2,3,4').split(',').map(d=>DAYS_HE[d]).join(', ')}</div>
           </div>
           <div class="info-card-actions">
             <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i> עריכה</button>
@@ -1506,7 +1506,7 @@ async function renderBarbers() {
             <td>${b.phone || '-'}</td>
             <td>${b.specialty || '-'}</td>
             <td>${b.work_start_time}-${b.work_end_time}</td>
-            <td>${b.work_days.split(',').map(d=>DAYS_HE[d]).join(', ')}</td>
+            <td>${(b.work_days||'0,1,2,3,4').split(',').map(d=>DAYS_HE[d]).join(', ')}</td>
             <td>
               <div class="btn-group">
                 <button class="btn btn-sm btn-outline" onclick="editBarber(${b.id})"><i class="fas fa-edit"></i></button>

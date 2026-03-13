@@ -25,7 +25,7 @@ router.get('/check/availability', async (req, res) => {
     if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
 
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
-    const workDays = barber.work_days.split(',').map(Number);
+    const workDays = (barber.work_days || '0,1,2,3,4').split(',').map(Number);
     if (!workDays.includes(dayOfWeek)) {
       return res.json({ available: false, reason: 'הספר לא עובד ביום זה' });
     }
@@ -71,7 +71,7 @@ router.get('/slots/:barber_id/:date', async (req, res) => {
     if (dayOff) return res.json({ slots: [], reason: 'יום חופש' });
 
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
-    const workDays = barber.work_days.split(',').map(Number);
+    const workDays = (barber.work_days || '0,1,2,3,4').split(',').map(Number);
     if (!workDays.includes(dayOfWeek)) return res.json({ slots: [], reason: 'לא עובד ביום זה' });
 
     let duration = barber.slot_duration;
@@ -251,8 +251,11 @@ router.put('/:id', async (req, res) => {
       updates.price = service.price;
     }
 
-    const keys = Object.keys(updates);
-    const values = Object.values(updates);
+    // Whitelist allowed columns to prevent SQL injection
+    const ALLOWED_COLUMNS = ['client_id', 'barber_id', 'service_id', 'date', 'start_time', 'end_time', 'duration', 'price', 'status', 'notes'];
+    const keys = Object.keys(updates).filter(k => ALLOWED_COLUMNS.includes(k));
+    const values = keys.map(k => updates[k]);
+    if (keys.length === 0) return res.status(400).json({ error: 'אין שדות לעדכון' });
     const setClauses = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
 
     await db.query(

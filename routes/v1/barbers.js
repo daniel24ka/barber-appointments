@@ -61,7 +61,7 @@ router.post('/', requireRole('admin'), async (req, res) => {
       work_days || '0,1,2,3,4', slot_duration || 30, color || '#4F46E5'
     );
 
-    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ?').get(result.lastInsertRowid);
+    const barber = await db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(result.lastInsertRowid, tid);
     res.status(201).json(barber);
   } catch (err) {
     console.error('Create barber error:', err);
@@ -91,7 +91,7 @@ router.put('/:id', requireRole('admin', 'barber'), async (req, res) => {
       notes ?? existing.notes, req.params.id, req.tenantId
     );
 
-    const updated = await db.prepare('SELECT * FROM barbers WHERE id = ?').get(req.params.id);
+    const updated = await db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
     res.json(updated);
   } catch (err) {
     console.error('Update barber error:', err);
@@ -146,6 +146,9 @@ router.post('/:id/days-off', requireRole('admin', 'barber'), async (req, res) =>
 router.delete('/:id/days-off/:dayOffId', requireRole('admin', 'barber'), async (req, res) => {
   try {
     const db = getDb();
+    // Verify barber belongs to this tenant before deleting day off
+    const barber = await db.prepare('SELECT id FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+    if (!barber) return res.status(404).json({ error: 'ספר לא נמצא' });
     await db.prepare('DELETE FROM days_off WHERE id = ? AND barber_id = ?').run(req.params.dayOffId, req.params.id);
     res.json({ message: 'יום החופש הוסר' });
   } catch (err) {

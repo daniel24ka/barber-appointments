@@ -292,21 +292,24 @@ router.get('/system/health', async (req, res) => {
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+
     // Trials expiring in next 7 days
     const expiringTrials = await db.prepare(`
       SELECT id, name, slug, owner_name, owner_phone, trial_ends_at
       FROM tenants WHERE plan = 'trial' AND active = 1
       AND trial_ends_at IS NOT NULL
-      AND trial_ends_at BETWEEN NOW() AND NOW() + INTERVAL '7 days'
+      AND trial_ends_at BETWEEN ? AND ?
       ORDER BY trial_ends_at ASC
-    `).all();
+    `).all(today, sevenDaysLater);
 
     // Expired trials still active
     const expiredTrials = await db.prepare(`
       SELECT id, name, slug, owner_name, trial_ends_at
       FROM tenants WHERE plan = 'trial' AND active = 1
-      AND trial_ends_at IS NOT NULL AND trial_ends_at < NOW()
-    `).all();
+      AND trial_ends_at IS NOT NULL AND trial_ends_at < ?
+    `).all(today);
 
     // Inactive tenants
     const inactiveTenants = await db.prepare(`
@@ -316,9 +319,9 @@ router.get('/system/health', async (req, res) => {
     // Recent registrations (last 30 days)
     const recentRegistrations = await db.prepare(`
       SELECT id, name, slug, owner_name, plan, created_at
-      FROM tenants WHERE created_at >= NOW() - INTERVAL '30 days'
+      FROM tenants WHERE created_at >= ?
       ORDER BY created_at DESC
-    `).all();
+    `).all(thirtyDaysAgo);
 
     // Monthly revenue trend (last 6 months)
     const revenueTrend = [];

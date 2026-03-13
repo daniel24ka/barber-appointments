@@ -34,7 +34,12 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://barber-appointments-production.up.railway.app']
+    : true,
+  credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
@@ -81,15 +86,25 @@ const registerLimiter = rateLimit({
 });
 app.use('/api/auth/register', registerLimiter);
 
-// Stricter rate limit for public booking
-const bookingLimiter = rateLimit({
+// Rate limit for public booking pages (browsing)
+const bookingBrowseLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'יותר מדי בקשות. נסה שוב מאוחר יותר.' }
+});
+app.use('/api/booking', bookingBrowseLimiter);
+
+// Stricter rate limit for booking submission
+const bookingSubmitLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'יותר מדי הזמנות. נסה שוב מאוחר יותר.' }
 });
-app.use('/api/booking/*/book', bookingLimiter);
+app.use('/api/booking/*/book', bookingSubmitLimiter);
 
 // Public booking routes - with tenant slug
 app.use('/api/booking/:slug', resolveTenantBySlug, require('./routes/v1/booking'));
